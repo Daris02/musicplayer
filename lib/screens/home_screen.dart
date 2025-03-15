@@ -1,156 +1,235 @@
-import 'dart:async';
-
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'music_list_screen.dart';
+import 'package:musicplayer/models/music.dart';
+import 'package:sliding_up_panel/sliding_up_panel.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:musicplayer/services/music_storage_service.dart';
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({Key? key}) : super(key: key);
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  List<String> _musicList = [];
+  List<Music> _musics = [];
   String? _currentMusic;
-  AudioPlayer _audioPlayer = AudioPlayer();
   bool _isPlaying = false;
-  Duration _currentPosition = Duration.zero;
-  Duration _musicDuration = Duration.zero;
-  Timer? _timer;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  final PanelController _panelController = PanelController();
 
   @override
   void initState() {
     super.initState();
-    _loadLastPlayedMusic();
-    _setupAudioListeners();
-  }
+    _loadMusicList();
+    _restoreLastPlayedMusic();
 
-  // Charge la dernière musique jouée depuis la liste sauvegardée
-  void _loadLastPlayedMusic() async {
-    List<String> musicFiles = await MusicStorageService.loadMusicList();
-    if (musicFiles.isNotEmpty) {
+    _audioPlayer.onPositionChanged.listen((pos) {
       setState(() {
-        _currentMusic = musicFiles.first;
-      });
-    }
-  }
-
-  // Configure les listeners pour mettre à jour la barre de progression
-  void _setupAudioListeners() {
-    _audioPlayer.onPositionChanged.listen((Duration position) {
-      setState(() {
-        _currentPosition = position;
-      });
-    });
-
-    _audioPlayer.onDurationChanged.listen((Duration duration) {
-      setState(() {
-        _musicDuration = duration;
+        _position = pos;
       });
     });
 
     _audioPlayer.onPlayerComplete.listen((event) {
+      _playNext();
+    });
+
+    _audioPlayer.onDurationChanged.listen((dur) {
       setState(() {
-        _isPlaying = false;
-        _currentPosition = Duration.zero;
+        _duration = dur;
       });
     });
   }
 
-  // Joue ou met en pause la musique
-  void _togglePlayPause() async {
-    if (_currentMusic == null) return;
-
-    if (_isPlaying) {
-      await _audioPlayer.pause();
-    } else {
-      await _audioPlayer.play(DeviceFileSource(_currentMusic!));
-    }
-
+  // Charger la liste des musiques
+  void _loadMusicList() async {
+    List<String> savedMusicList = await MusicStorageService.loadMusicList();
     setState(() {
-      _isPlaying = !_isPlaying;
+      _musicList = savedMusicList;
     });
   }
 
-  @override
-  void dispose() {
-    _audioPlayer.dispose();
-    super.dispose();
+  // Restaurer la dernière musique jouée
+  void _restoreLastPlayedMusic() async {
+    String? lastMusic = await MusicStorageService.getLastPlayedMusic();
+    if (lastMusic != null) {
+      setState(() {
+        _currentMusic = lastMusic;
+      });
+    }
+  }
+
+  // Jouer ou mettre en pause la musique
+  void _playMusic(String musicPath) async {
+    if (_currentMusic == musicPath && _isPlaying) {
+      await _audioPlayer.pause();
+      setState(() {
+        _isPlaying = false;
+      });
+    } else {
+      await _audioPlayer.play(DeviceFileSource(musicPath), position: _position);
+      await MusicStorageService.saveLastPlayedMusic(musicPath);
+      setState(() {
+        _currentMusic = musicPath;
+        _isPlaying = true;
+      });
+    }
+  }
+
+  // Passer à la musique suivante
+  void _playNext() {
+    if (_musicList.isEmpty) return;
+    int currentIndex = _musicList.indexOf(_currentMusic ?? '');
+    int nextIndex = (currentIndex + 1) % _musicList.length;
+    _playMusic(_musicList[nextIndex]);
+  }
+
+  // Passer à la musique précédente
+  void _playPrevious() {
+    if (_musicList.isEmpty) return;
+    int currentIndex = _musicList.indexOf(_currentMusic ?? '');
+    int prevIndex = (currentIndex - 1) % _musicList.length;
+    if (prevIndex < 0) prevIndex = _musicList.length - 1;
+    _playMusic(_musicList[prevIndex]);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Music Player")),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _currentMusic?.split('/').last ?? "Aucune musique sélectionnée",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 20),
-
-            // Barre de progression
-            Slider(
-              min: 0,
-              max: _musicDuration.inSeconds.toDouble(),
-              value: _currentPosition.inSeconds.toDouble(),
-              onChanged: (value) async {
-                await _audioPlayer.seek(Duration(seconds: value.toInt()));
-              },
-            ),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "${_formatDuration(_currentPosition)} / ${_formatDuration(_musicDuration)}",
-                  style: TextStyle(fontSize: 14),
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              Expanded(
+                child: AnimationLimiter(
+                  child: ListView.builder(
+                    itemCount: _musicList.length,
+                    itemBuilder: (context, index) {
+                      return AnimationConfiguration.staggeredList(
+                        position: index,
+                        duration: const Duration(milliseconds: 500),
+                        child: SlideAnimation(
+                          verticalOffset: 50.0,
+                          child: FadeInAnimation(
+                            child: ListTile(
+                              title: Text(_musicList[index].split('/').last),
+                              onTap: () {
+                                _playMusic(_musicList[index]);
+                              },
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ],
-            ),
-            SizedBox(height: 20),
+              ),
+            ],
+          ),
 
-            // Bouton Play/Pause
-            IconButton(
-              icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow, size: 50),
-              onPressed: _togglePlayPause,
-            ),
-
-            SizedBox(height: 20),
-
-            // Bouton pour aller à la liste des musiques
-            ElevatedButton(
-              onPressed: () async {
-                final selectedMusic = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => MusicListScreen()),
-                );
-
-                if (selectedMusic != null) {
-                  setState(() {
-                    _currentMusic = selectedMusic;
-                    _isPlaying = false;
-                  });
-                  _audioPlayer.stop(); // Arrête la musique précédente
-                }
-              },
-              child: Text("Voir la liste des musiques"),
-            ),
-          ],
-        ),
+          // Floating Music Player avec Sliding Panel
+          SlidingUpPanel(
+            controller: _panelController,
+            minHeight: 80,
+            maxHeight: MediaQuery.of(context).size.height * 1,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            panel: _buildExpandedPlayer(),
+            collapsed: _buildMiniPlayer(),
+          ),
+        ],
       ),
     );
   }
 
-  // Formatte la durée en minutes:secondes
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, "0");
-    String minutes = twoDigits(duration.inMinutes);
-    String seconds = twoDigits(duration.inSeconds.remainder(60));
-    return "$minutes:$seconds";
+  // Mini player (barre inférieure)
+  Widget _buildMiniPlayer() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.blueAccent,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            _currentMusic?.split('/').last ?? "Aucune musique",
+            style: TextStyle(color: Colors.white, fontSize: 16),
+            overflow: TextOverflow.ellipsis,
+          ),
+          IconButton(
+            icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow, color: Colors.white),
+            onPressed: () => _playMusic(_currentMusic!),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Grand lecteur musical
+  Widget _buildExpandedPlayer() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          _currentMusic?.split('/').last ?? "Aucune musique",
+          style: TextStyle(color: Colors.black, fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: 20),
+
+        // Barre de progression
+        Slider(
+          value: _position.inSeconds.toDouble(),
+          max: _duration.inSeconds.toDouble(),
+          onChanged: (value) {
+            _audioPlayer.seek(Duration(seconds: value.toInt()));
+            setState(() {
+              _position = Duration(seconds: value.toInt());
+            });
+          },
+        ),
+
+        // Affichage du temps
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "${_position.inMinutes}:${(_position.inSeconds % 60).toString().padLeft(2, '0')}",
+              style: TextStyle(color: Colors.black),
+            ),
+            Text(
+              "${_duration.inMinutes}:${(_duration.inSeconds % 60).toString().padLeft(2, '0')}",
+              style: TextStyle(color: Colors.black),
+            ),
+          ],
+        ),
+
+        SizedBox(height: 20),
+
+        // Boutons de contrôle
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              icon: Icon(Icons.skip_previous, color: Colors.black, size: 40),
+              onPressed: _playPrevious,
+            ),
+            IconButton(
+              icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow, color: Colors.black, size: 50),
+              onPressed: () => _playMusic(_currentMusic!),
+            ),
+            IconButton(
+              icon: Icon(Icons.skip_next, color: Colors.black, size: 40),
+              onPressed: _playNext,
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }
