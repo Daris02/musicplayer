@@ -56,9 +56,6 @@ class _HomeScreenState extends State<HomeScreen> {
   // Charger la liste des musiques
   Future<void> _loadMusicList() async {
     List<Music> savedMusicList = await MusicStorageService.loadMusicList();
-    // if (savedMusicList.isEmpty) {
-    //   _pickMusicFiles();
-    // }
     setState(() {
       _musicList = savedMusicList;
     });
@@ -76,23 +73,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Jouer ou mettre en pause la musique
   void _playMusic(Music music) async {
-  if (_currentMusic == music) {
-    if (_isPlaying) {
-      await _audioPlayer.pause();
-      setState(() {
-        _isPlaying = false;
-      });
+    if (_currentMusic == music) {
+      if (_isPlaying) {
+        await _audioPlayer.pause();
+        setState(() {
+          _isPlaying = false;
+        });
+      } else {
+        // Vérifie si l'audio est prêt, sinon le charge et joue depuis le début
+        PlayerState state = _audioPlayer.state;
+        if (state == PlayerState.completed || state == PlayerState.stopped) {
+          await _audioPlayer.play(DeviceFileSource(music.path));
+        } else {
+          await _audioPlayer.resume();
+        }
+        setState(() {
+          _isPlaying = true;
+        });
+      }
     } else {
-      await _audioPlayer.resume(); // Reprend depuis la position actuelle
-      setState(() {
-        _isPlaying = true;
-      });
-    }
-    } else {
-      await _audioPlayer.play(
-        DeviceFileSource(music.path),
-        position: Duration.zero,
-      );
+      await _audioPlayer.stop();
+      await _audioPlayer.play(DeviceFileSource(music.path));
       await MusicStorageService.saveLastPlayedMusic(music);
       setState(() {
         _currentMusic = music;
