@@ -91,15 +91,10 @@ class MusicStorageService {
             id: file.hashCode.toString(),
           ));
         } catch (e) {
-          print("Erreur lors de l’extraction des métadonnées : $e");
+          debugPrint("Erreur lors de l’extraction des métadonnées : $e");
         }
       }
     }
-    
-    // List<Music> newMusicList = files
-    //     .where((file) => file is File && _allowedExtensions.any(file.path.endsWith))
-    //     .map((file) => Music(path: file.path, title: file.uri.pathSegments.last, id: file.hashCode.toString(), album: '', artist: ''))
-    //     .toList();
 
     if (newMusicList.isEmpty) {
       debugPrint("⚠️ Aucun fichier audio trouvé dans le dossier sélectionné");
