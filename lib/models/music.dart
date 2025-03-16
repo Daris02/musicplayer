@@ -12,7 +12,7 @@ class Music {
     required this.artist,
     required this.album,
     required this.path,
-    this.artwork,
+    this.artwork, required coverArt,
   });
 
   Map<String, dynamic> toJson() => {
@@ -31,5 +31,6 @@ class Music {
         album: json['album'],
         path: json['path'],
         artwork: json['artwork'],
+        coverArt: json['coverArt'],
       );
 }

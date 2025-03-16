@@ -1,22 +1,20 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:musicplayer/models/music.dart';
-import 'package:sliding_up_panel/sliding_up_panel.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:musicplayer/services/music_storage_service.dart';
+import 'package:musicplayer/widgets/music_tile.dart';
+import 'package:sliding_up_panel/sliding_up_panel.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<String> _musicList = [];
-  List<Music> _musics = [];
-  String? _currentMusic;
+  List<Music> _musicList = [];
+  Music? _currentMusic;
   bool _isPlaying = false;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
@@ -26,8 +24,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadMusicList();
-    _restoreLastPlayedMusic();
+    _loadMusicList().then((_) {
+      _restoreLastPlayedMusic();
+    });
 
     _audioPlayer.onPositionChanged.listen((pos) {
       setState(() {
@@ -46,9 +45,17 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // Add music folder
+  void _pickMusicFiles() async {
+    List<Music> result = await MusicStorageService.pickMusicFilesFromFolder();
+    setState(() {
+      _musicList.addAll(result);
+    });
+  }
+
   // Charger la liste des musiques
-  void _loadMusicList() async {
-    List<String> savedMusicList = await MusicStorageService.loadMusicList();
+  Future<void> _loadMusicList() async {
+    List<Music> savedMusicList = await MusicStorageService.loadMusicList();
     setState(() {
       _musicList = savedMusicList;
     });
@@ -56,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Restaurer la dernière musique jouée
   void _restoreLastPlayedMusic() async {
-    String? lastMusic = await MusicStorageService.getLastPlayedMusic();
+    Music? lastMusic = await MusicStorageService.getLastPlayedMusic();
     if (lastMusic != null) {
       setState(() {
         _currentMusic = lastMusic;
@@ -65,17 +72,31 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Jouer ou mettre en pause la musique
-  void _playMusic(String musicPath) async {
-    if (_currentMusic == musicPath && _isPlaying) {
-      await _audioPlayer.pause();
-      setState(() {
-        _isPlaying = false;
-      });
+  void _playMusic(Music music) async {
+    if (_currentMusic == music) {
+      if (_isPlaying) {
+        await _audioPlayer.pause();
+        setState(() {
+          _isPlaying = false;
+        });
+      } else {
+        // Vérifie si l'audio est prêt, sinon le charge et joue depuis le début
+        PlayerState state = _audioPlayer.state;
+        if (state == PlayerState.completed || state == PlayerState.stopped) {
+          await _audioPlayer.play(DeviceFileSource(music.path));
+        } else {
+          await _audioPlayer.resume();
+        }
+        setState(() {
+          _isPlaying = true;
+        });
+      }
     } else {
-      await _audioPlayer.play(DeviceFileSource(musicPath), position: _position);
-      await MusicStorageService.saveLastPlayedMusic(musicPath);
+      await _audioPlayer.stop();
+      await _audioPlayer.play(DeviceFileSource(music.path));
+      await MusicStorageService.saveLastPlayedMusic(music);
       setState(() {
-        _currentMusic = musicPath;
+        _currentMusic = music;
         _isPlaying = true;
       });
     }
@@ -84,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Passer à la musique suivante
   void _playNext() {
     if (_musicList.isEmpty) return;
-    int currentIndex = _musicList.indexOf(_currentMusic ?? '');
+    int currentIndex = _musicList.indexOf(_currentMusic!);
     int nextIndex = (currentIndex + 1) % _musicList.length;
     _playMusic(_musicList[nextIndex]);
   }
@@ -92,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Passer à la musique précédente
   void _playPrevious() {
     if (_musicList.isEmpty) return;
-    int currentIndex = _musicList.indexOf(_currentMusic ?? '');
+    int currentIndex = _musicList.indexOf(_currentMusic!);
     int prevIndex = (currentIndex - 1) % _musicList.length;
     if (prevIndex < 0) prevIndex = _musicList.length - 1;
     _playMusic(_musicList[prevIndex]);
@@ -101,35 +122,23 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text('Music Player'),
+        centerTitle: true,
+        actions: [
+          IconButton(icon: Icon(Icons.folder_open), onPressed: _pickMusicFiles),
+        ],
+      ),
       body: Stack(
         children: [
-          Column(
-            children: [
-              Expanded(
-                child: AnimationLimiter(
-                  child: ListView.builder(
-                    itemCount: _musicList.length,
-                    itemBuilder: (context, index) {
-                      return AnimationConfiguration.staggeredList(
-                        position: index,
-                        duration: const Duration(milliseconds: 500),
-                        child: SlideAnimation(
-                          verticalOffset: 50.0,
-                          child: FadeInAnimation(
-                            child: ListTile(
-                              title: Text(_musicList[index].split('/').last),
-                              onTap: () {
-                                _playMusic(_musicList[index]);
-                              },
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
+          ListView.builder(
+            itemCount: _musicList.length,
+            itemBuilder: (context, index) {
+              return MusicTile(
+                music: _musicList[index],
+                onTap: () => _playMusic(_musicList[index]),
+              );
+            },
           ),
 
           // Floating Music Player avec Sliding Panel
@@ -146,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Mini player (barre inférieure)
+  // Mini player
   Widget _buildMiniPlayer() {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20),
@@ -158,12 +167,15 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            _currentMusic?.split('/').last ?? "Aucune musique",
+            _currentMusic?.title ?? "Aucune musique",
             style: TextStyle(color: Colors.white, fontSize: 16),
             overflow: TextOverflow.ellipsis,
           ),
           IconButton(
-            icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow, color: Colors.white),
+            icon: Icon(
+              _isPlaying ? Icons.pause : Icons.play_arrow,
+              color: Colors.white,
+            ),
             onPressed: () => _playMusic(_currentMusic!),
           ),
         ],
@@ -177,12 +189,10 @@ class _HomeScreenState extends State<HomeScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          _currentMusic?.split('/').last ?? "Aucune musique",
-          style: TextStyle(color: Colors.black, fontSize: 24, fontWeight: FontWeight.bold),
+          _currentMusic?.title ?? "Aucune musique",
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         SizedBox(height: 20),
-
-        // Barre de progression
         Slider(
           value: _position.inSeconds.toDouble(),
           max: _duration.inSeconds.toDouble(),
@@ -193,40 +203,18 @@ class _HomeScreenState extends State<HomeScreen> {
             });
           },
         ),
-
-        // Affichage du temps
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              "${_position.inMinutes}:${(_position.inSeconds % 60).toString().padLeft(2, '0')}",
-              style: TextStyle(color: Colors.black),
-            ),
-            Text(
-              "${_duration.inMinutes}:${(_duration.inSeconds % 60).toString().padLeft(2, '0')}",
-              style: TextStyle(color: Colors.black),
-            ),
-          ],
-        ),
-
-        SizedBox(height: 20),
-
-        // Boutons de contrôle
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             IconButton(
-              icon: Icon(Icons.skip_previous, color: Colors.black, size: 40),
+              icon: Icon(Icons.skip_previous),
               onPressed: _playPrevious,
             ),
             IconButton(
-              icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow, color: Colors.black, size: 50),
+              icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
               onPressed: () => _playMusic(_currentMusic!),
             ),
-            IconButton(
-              icon: Icon(Icons.skip_next, color: Colors.black, size: 40),
-              onPressed: _playNext,
-            ),
+            IconButton(icon: Icon(Icons.skip_next), onPressed: _playNext),
           ],
         ),
       ],
