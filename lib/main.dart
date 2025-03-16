@@ -6,15 +6,17 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Music Player',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: HomeScreen(),
+    return  MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          // textTheme: GoogleFonts.poppinsTextTheme(),
+          primarySwatch: Colors.blue,
+        ),
+        home: const HomeScreen(),
     );
   }
 }

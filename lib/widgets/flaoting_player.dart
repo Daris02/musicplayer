@@ -7,7 +7,7 @@ class FloatingPlayer extends StatelessWidget {
   final Duration musicDuration;
   final VoidCallback onTogglePlayPause;
 
-  FloatingPlayer({
+  const FloatingPlayer({super.key, 
     required this.currentMusic,
     required this.isPlaying,
     required this.currentPosition,

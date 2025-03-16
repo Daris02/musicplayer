@@ -1,3 +1,5 @@
+import 'package:musicplayer/models/music.dart';
+
 class Playlist {
   final String name;
   final List<Music> songs;
