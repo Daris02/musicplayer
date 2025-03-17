@@ -11,13 +11,26 @@ class MusicTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: music.coverArt != null
-          ? Image.memory(music.coverArt ?? Uint8List(0), width: 50, height: 50, fit: BoxFit.cover)
-          : Icon(Icons.music_note, size: 50),
-      title: Text(music.title, style: TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text(music.artist != '' ? music.artist : 'unknown artist'),
-      onTap: onTap,
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: music.coverArt != null
+              ? Image.memory(music.coverArt!, width: 50, height: 50, fit: BoxFit.cover)
+              : const Icon(Icons.music_note, size: 50),
+        ),
+        title: Text(
+          music.title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+        ),
+        subtitle: Text(
+          music.artist != '' ? music.artist : 'Artiste inconnu',
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
+        ),
+        onTap: onTap,
+      ),
     );
   }
 }

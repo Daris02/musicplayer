@@ -1,11 +1,9 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:musicplayer/models/music.dart';
 import 'package:musicplayer/services/music_storage_service.dart';
 import 'package:musicplayer/widgets/music_tile.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,6 +15,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<Music> _musicList = [];
+  List<Music> _filteredMusicList = []; // Liste filtrée pour l'affichage
   Music? _currentMusic;
   bool _isPlaying = false;
   Duration _position = Duration.zero;
@@ -24,13 +23,13 @@ class _HomeScreenState extends State<HomeScreen> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   final PanelController _panelController = PanelController();
   double _panelPosition = 0.0;
+  bool _isSearching = false; // État pour afficher ou masquer la SearchBar
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadMusicList().then((_) {
-      _restoreLastPlayedMusic();
-    });
+    _initializeMusicData(); // Nouvelle méthode pour gérer l'initialisation
 
     _audioPlayer.onPositionChanged.listen((pos) {
       setState(() {
@@ -47,13 +46,50 @@ class _HomeScreenState extends State<HomeScreen> {
         _duration = dur;
       });
     });
+
+    // Écouter les changements dans le champ de recherche
+    _searchController.addListener(_filterMusicList);
   }
 
-  // Add music folder
-  void _pickMusicFiles() async {
-    List<Music> result = await MusicStorageService.pickMusicFilesFromFolder();
+  // Nouvelle méthode pour initialiser les données de musique
+  Future<void> _initializeMusicData() async {
+    try {
+      await _loadMusicList(); // Charge la liste des musiques
+      await _restoreLastPlayedMusic(); // Restaure la dernière musique jouée
+      setState(() {
+        _filteredMusicList = List.from(_musicList); // Synchronise immédiatement
+      });
+    } catch (e) {
+      print("Erreur lors de l'initialisation des données : $e");
+      setState(() {
+        _filteredMusicList = []; // Affiche une liste vide en cas d'erreur
+      });
+    }
+  }
+
+  // Filtrer la liste des musiques en fonction du texte saisi
+  void _filterMusicList() {
+    String query = _searchController.text.toLowerCase();
     setState(() {
-      _musicList.addAll(result);
+      if (query.isEmpty) {
+        _filteredMusicList = List.from(_musicList);
+      } else {
+        _filteredMusicList = _musicList.where((music) {
+          return music.title.toLowerCase().contains(query) ||
+              music.artist.toLowerCase().contains(query);
+        }).toList();
+      }
+    });
+  }
+
+  // Activer/désactiver le mode recherche
+  void _toggleSearch() {
+    setState(() {
+      _isSearching = !_isSearching;
+      if (!_isSearching) {
+        _searchController.clear();
+        _filteredMusicList = List.from(_musicList); // Réinitialiser la liste
+      }
     });
   }
 
@@ -66,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Restaurer la dernière musique jouée
-  void _restoreLastPlayedMusic() async {
+  Future<void> _restoreLastPlayedMusic() async {
     Music? lastMusic = await MusicStorageService.getLastPlayedMusic();
     if (lastMusic != null) {
       setState(() {
@@ -84,7 +120,6 @@ class _HomeScreenState extends State<HomeScreen> {
           _isPlaying = false;
         });
       } else {
-        // Vérifie si l'audio est prêt, sinon le charge et joue depuis le début
         PlayerState state = _audioPlayer.state;
         if (state == PlayerState.completed || state == PlayerState.stopped) {
           await _audioPlayer.play(DeviceFileSource(music.path));
@@ -123,82 +158,152 @@ class _HomeScreenState extends State<HomeScreen> {
     _playMusic(_musicList[prevIndex]);
   }
 
+  // Add music folder
+  void _pickMusicFiles() async {
+    List<Music> result = await MusicStorageService.pickMusicFilesFromFolder();
+    setState(() {
+      _musicList.addAll(result);
+      _filteredMusicList = List.from(_musicList); // Synchronise après ajout
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Music Player'),
+        title: _isSearching
+            ? TextField(
+          controller: _searchController,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: "Rechercher une chanson ou un artiste...",
+            hintStyle: const TextStyle(color: Colors.black54),
+            border: InputBorder.none,
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.clear, color: Colors.black54),
+              onPressed: () {
+                _searchController.clear();
+              },
+            ),
+          ),
+          style: const TextStyle(color: Colors.black, fontSize: 16),
+        )
+            : const Text(
+          'Music Player',
+          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
+        backgroundColor: Colors.blueAccent.withOpacity(0.8),
+        elevation: 0,
         actions: [
-          IconButton(icon: Icon(Icons.folder_open), onPressed: _pickMusicFiles),
+          IconButton(
+            icon: Icon(_isSearching ? Icons.close : Icons.search),
+            onPressed: _toggleSearch,
+          ),
+          if (!_isSearching)
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline, size: 28),
+              onPressed: _pickMusicFiles,
+            ),
         ],
       ),
       body: Stack(
         children: [
-          ListView.builder(
-            itemCount: _musicList.length,
-            itemBuilder: (context, index) {
-              return MusicTile(
-                music: _musicList[index],
-                onTap: () => _playMusic(_musicList[index]),
-              );
-            },
+          Container(
+            color: Colors.grey[100],
+            child: _filteredMusicList.isEmpty && _musicList.isEmpty
+                ? const Center(child: CircularProgressIndicator()) // Indicateur de chargement
+                : ListView.builder(
+              itemCount: _filteredMusicList.length,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: MusicTile(
+                    music: _filteredMusicList[index],
+                    onTap: () => _playMusic(_filteredMusicList[index]),
+                  ),
+                );
+              },
+            ),
           ),
-
-          // Floating Music Player avec Sliding Panel amélioré
           SlidingUpPanel(
             controller: _panelController,
-            minHeight: 80,
-            maxHeight: MediaQuery.of(context).size.height,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            minHeight: 60,
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             panelBuilder: (sc) => _buildExpandedPlayer(),
             collapsed: _buildMiniPlayer(),
-            onPanelSlide: (position) {
-              setState(() {
-                _panelPosition = position;
-              });
-            },
+            onPanelSlide: (position) => setState(() => _panelPosition = position),
           ),
         ],
       ),
     );
   }
 
-  // Mini Player avec animation fluide du titre
   Widget _buildMiniPlayer() {
     return GestureDetector(
-      onTap: () => _panelController.open(), // Ouvrir le lecteur en grand
+      onTap: () => _panelController.open(),
       child: AnimatedContainer(
-        duration: Duration(milliseconds: 300),
-        padding: EdgeInsets.symmetric(horizontal: 20),
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: Colors.blueAccent,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          color: Color.fromRGBO(238, 238, 238, 0.9), // Remplacement ici
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              offset: Offset(0, 2),
+              blurRadius: 8,
+              spreadRadius: 0,
+            ),
+          ],
         ),
-        height:
-            80 + (120 * _panelPosition), // Ajustement de la hauteur dynamique
+        height: 60 + (80 * _panelPosition),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            AnimatedDefaultTextStyle(
-              duration: Duration(milliseconds: 300),
-              style: TextStyle(
-                color: Colors.white,
-                fontSize:
-                    16 + (24 * _panelPosition), // Agrandissement progressif
-                fontWeight: FontWeight.bold,
-              ),
-              child: Text(
-                _currentMusic?.title ?? "Aucune musique",
-                overflow: TextOverflow.ellipsis,
+            const Icon(
+              Icons.music_note,
+              size: 24,
+              color: Colors.black54,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 300),
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14 + (10 * _panelPosition),
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins',
+                    ),
+                    child: Text(
+                      _currentMusic?.title ?? "Aucune musique",
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Text(
+                    _currentMusic?.artist ?? "Artiste inconnu",
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 12,
+                      fontFamily: 'Poppins',
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
             IconButton(
               icon: Icon(
                 _isPlaying ? Icons.pause : Icons.play_arrow,
-                color: Colors.white,
+                color: Colors.black87,
+                size: 28,
               ),
-              onPressed: () => _playMusic(_currentMusic!),
+              onPressed: _currentMusic != null ? () => _playMusic(_currentMusic!) : null,
             ),
           ],
         ),
@@ -206,109 +311,95 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Lecteur de musique en plein écran avec animation
   Widget _buildExpandedPlayer() {
     return Container(
-      padding: EdgeInsets.all(10),
+      padding: const EdgeInsets.all(16),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            height: 200,
-            width: 200,
-            child: _currentMusic?.coverArt != null ?
-              Image.memory(_currentMusic?.coverArt ?? Uint8List(0), fit: BoxFit.cover)
-              : Icon(Icons.music_note, size: 75)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: _currentMusic?.coverArt != null
+                ? Image.memory(_currentMusic!.coverArt!, height: 200, width: 200, fit: BoxFit.cover)
+                : const Icon(Icons.music_note, size: 75),
           ),
-          // Animation du titre qui s'agrandit depuis le mini-player
-          AnimatedDefaultTextStyle(
-            duration: Duration(milliseconds: 300),
-            style: TextStyle(
-              fontSize: 24 + (16 * _panelPosition), // Taille du texte dynamique
+          const SizedBox(height: 20),
+          Text(
+            _currentMusic?.title ?? "Aucune musique",
+            style: const TextStyle(
+              fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.black,
+              fontFamily: 'Poppins',
             ),
-            child: Text(
-              _currentMusic?.title ?? "Aucune musique",
-              textAlign: TextAlign.center,
+            textAlign: TextAlign.center,
+          ),
+          Text(
+            _currentMusic?.artist ?? '',
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+              fontFamily: 'Poppins',
             ),
           ),
-          // Animation du titre qui s'agrandit depuis le mini-player
-          AnimatedDefaultTextStyle(
-            duration: Duration(milliseconds: 300),
-            style: TextStyle(
-              fontSize: 15 + (16 * _panelPosition), // Taille du texte dynamique
-              fontWeight: FontWeight.normal,
-              color: const Color.fromARGB(135, 0, 0, 0),
-            ),
-            child: Text(
-              _currentMusic?.artist ?? '',
-              textAlign: TextAlign.center,
-            ),
-          ),
-
-          SizedBox(height: 30),
+          const SizedBox(height: 20),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            mainAxisSize: MainAxisSize.max,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                _formatDuration(_position),
-                style: TextStyle(fontSize: 14),
-              ),
-              // Animation du Slider (apparition fluide)
-              AnimatedOpacity(
-                duration: Duration(milliseconds: 100),
-                opacity: _panelPosition,
-                child: Slider(
-                  value: _position.inSeconds.toDouble(),
-                  max: _duration.inSeconds.toDouble(),
-                  onChanged: (value) {
-                    _audioPlayer.seek(Duration(seconds: value.toInt()));
-                    setState(() {
-                      _position = Duration(seconds: value.toInt());
-                    });
-                  },
+              Text(_formatDuration(_position), style: const TextStyle(fontSize: 12)),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderThemeData(
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+                    trackHeight: 4,
+                  ),
+                  child: Slider(
+                    value: _position.inSeconds.toDouble(),
+                    max: _duration.inSeconds.toDouble(),
+                    activeColor: Colors.blueAccent,
+                    inactiveColor: Colors.grey[300],
+                    onChanged: (value) {
+                      _audioPlayer.seek(Duration(seconds: value.toInt()));
+                      setState(() => _position = Duration(seconds: value.toInt()));
+                    },
+                  ),
                 ),
               ),
-              Text(
-                _formatDuration(_duration),
-                style: TextStyle(fontSize: 14),
-              ),
+              Text(_formatDuration(_duration), style: const TextStyle(fontSize: 12)),
             ],
           ),
-          // Boutons de contrôle avec animation
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                icon: Icon(Icons.skip_previous, color: Colors.black),
+                icon: const Icon(Icons.skip_previous, size: 36),
                 onPressed: _playPrevious,
               ),
               IconButton(
-                icon: Icon(
-                  _isPlaying ? Icons.pause : Icons.play_arrow,
-                  color: Colors.black,
-                ),
-                onPressed: () => _playMusic(_currentMusic!),
+                icon: Icon(_isPlaying ? Icons.pause_circle : Icons.play_circle, size: 48),
+                onPressed: _currentMusic != null ? () => _playMusic(_currentMusic!) : null,
               ),
               IconButton(
-                icon: Icon(Icons.skip_next, color: Colors.black),
+                icon: const Icon(Icons.skip_next, size: 36),
                 onPressed: _playNext,
               ),
             ],
-          ).animate().fadeIn(delay: 300.ms).moveY(begin: 20, end: 0),
+          ),
         ],
       ),
     );
   }
 
-  // Formatte la durée en minutes:secondes
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, "0");
     String minutes = twoDigits(duration.inMinutes);
     String seconds = twoDigits(duration.inSeconds.remainder(60));
     return "$minutes:$seconds";
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _audioPlayer.dispose(); // Ajout pour éviter les fuites de mémoire
+    super.dispose();
   }
 }
