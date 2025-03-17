@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 class Music {
   final String id;
   final String title;
@@ -5,6 +7,7 @@ class Music {
   final String album;
   final String path;
   final String? artwork;
+  final Uint8List? coverArt;
 
   Music({
     required this.id,
@@ -12,7 +15,8 @@ class Music {
     required this.artist,
     required this.album,
     required this.path,
-    this.artwork, required coverArt,
+    required this.coverArt,
+    this.artwork,
   });
 
   Map<String, dynamic> toJson() => {

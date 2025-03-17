@@ -3,6 +3,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:musicplayer/models/music.dart';
 import 'package:musicplayer/services/music_storage_service.dart';
 import 'package:musicplayer/widgets/music_tile.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -20,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Duration _duration = Duration.zero;
   final AudioPlayer _audioPlayer = AudioPlayer();
   final PanelController _panelController = PanelController();
+  double _panelPosition = 0.0;
 
   @override
   void initState() {
@@ -141,83 +143,164 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
 
-          // Floating Music Player avec Sliding Panel
+          // Floating Music Player avec Sliding Panel amélioré
           SlidingUpPanel(
             controller: _panelController,
             minHeight: 80,
-            maxHeight: MediaQuery.of(context).size.height * 1,
+            maxHeight: MediaQuery.of(context).size.height,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            panel: _buildExpandedPlayer(),
+            panelBuilder: (sc) => _buildExpandedPlayer(),
             collapsed: _buildMiniPlayer(),
+            onPanelSlide: (position) {
+              setState(() {
+                _panelPosition = position;
+              });
+            },
           ),
         ],
       ),
     );
   }
 
-  // Mini player
+  // Mini Player avec animation fluide du titre
   Widget _buildMiniPlayer() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(
-        color: Colors.blueAccent,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            _currentMusic?.title ?? "Aucune musique",
-            style: TextStyle(color: Colors.white, fontSize: 16),
-            overflow: TextOverflow.ellipsis,
-          ),
-          IconButton(
-            icon: Icon(
-              _isPlaying ? Icons.pause : Icons.play_arrow,
-              color: Colors.white,
-            ),
-            onPressed: () => _playMusic(_currentMusic!),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Grand lecteur musical
-  Widget _buildExpandedPlayer() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          _currentMusic?.title ?? "Aucune musique",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+    return GestureDetector(
+      onTap: () => _panelController.open(), // Ouvrir le lecteur en grand
+      child: AnimatedContainer(
+        duration: Duration(milliseconds: 300),
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.blueAccent,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        SizedBox(height: 20),
-        Slider(
-          value: _position.inSeconds.toDouble(),
-          max: _duration.inSeconds.toDouble(),
-          onChanged: (value) {
-            _audioPlayer.seek(Duration(seconds: value.toInt()));
-            setState(() {
-              _position = Duration(seconds: value.toInt());
-            });
-          },
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        height:
+            80 + (120 * _panelPosition), // Ajustement de la hauteur dynamique
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            IconButton(
-              icon: Icon(Icons.skip_previous),
-              onPressed: _playPrevious,
+            AnimatedDefaultTextStyle(
+              duration: Duration(milliseconds: 300),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize:
+                    16 + (24 * _panelPosition), // Agrandissement progressif
+                fontWeight: FontWeight.bold,
+              ),
+              child: Text(
+                _currentMusic?.title ?? "Aucune musique",
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             IconButton(
-              icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
+              icon: Icon(
+                _isPlaying ? Icons.pause : Icons.play_arrow,
+                color: Colors.white,
+              ),
               onPressed: () => _playMusic(_currentMusic!),
             ),
-            IconButton(icon: Icon(Icons.skip_next), onPressed: _playNext),
           ],
         ),
-      ],
+      ),
     );
+  }
+
+  // Lecteur de musique en plein écran avec animation
+  Widget _buildExpandedPlayer() {
+    return Container(
+      padding: EdgeInsets.all(20),
+      color: Colors.black,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Animation du titre qui s'agrandit depuis le mini-player
+          AnimatedDefaultTextStyle(
+            duration: Duration(milliseconds: 300),
+            style: TextStyle(
+              fontSize: 24 + (16 * _panelPosition), // Taille du texte dynamique
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+            child: Text(
+              _currentMusic?.title ?? "Aucune musique",
+              textAlign: TextAlign.center,
+            ),
+          ),
+          // Animation du titre qui s'agrandit depuis le mini-player
+          AnimatedDefaultTextStyle(
+            duration: Duration(milliseconds: 300),
+            style: TextStyle(
+              fontSize: 15 + (16 * _panelPosition), // Taille du texte dynamique
+              fontWeight: FontWeight.normal,
+              color: const Color.fromARGB(136, 255, 255, 255),
+            ),
+            child: Text(
+              _currentMusic?.artist ?? '',
+              textAlign: TextAlign.center,
+            ),
+          ),
+
+          SizedBox(height: 30),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisSize: MainAxisSize.max,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                _formatDuration(_position),
+                style: TextStyle(fontSize: 14),
+              ),
+              // Animation du Slider (apparition fluide)
+              AnimatedOpacity(
+                duration: Duration(milliseconds: 100),
+                opacity: _panelPosition,
+                child: Slider(
+                  value: _position.inSeconds.toDouble(),
+                  max: _duration.inSeconds.toDouble(),
+                  onChanged: (value) {
+                    _audioPlayer.seek(Duration(seconds: value.toInt()));
+                    setState(() {
+                      _position = Duration(seconds: value.toInt());
+                    });
+                  },
+                ),
+              ),
+              Text(
+                _formatDuration(_duration),
+                style: TextStyle(fontSize: 14),
+              ),
+            ],
+          ),
+          // Boutons de contrôle avec animation
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: Icon(Icons.skip_previous, color: Colors.white),
+                onPressed: _playPrevious,
+              ),
+              IconButton(
+                icon: Icon(
+                  _isPlaying ? Icons.pause : Icons.play_arrow,
+                  color: Colors.white,
+                ),
+                onPressed: () => _playMusic(_currentMusic!),
+              ),
+              IconButton(
+                icon: Icon(Icons.skip_next, color: Colors.white),
+                onPressed: _playNext,
+              ),
+            ],
+          ).animate().fadeIn(delay: 300.ms).moveY(begin: 20, end: 0),
+        ],
+      ),
+    );
+  }
+
+  // Formatte la durée en minutes:secondes
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String minutes = twoDigits(duration.inMinutes);
+    String seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$minutes:$seconds";
   }
 }

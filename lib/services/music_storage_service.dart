@@ -87,7 +87,7 @@ class MusicStorageService {
             title: metadata.trackName ?? file.uri.pathSegments.last,
             artist: metadata.albumArtistName ?? "Inconnu",
             album: metadata.albumName ?? "Inconnu",
-            coverArt: metadata.albumArt != null ? metadata.albumArt! : null,
+            coverArt: metadata.albumArt,
             id: file.hashCode.toString(),
           ));
         } catch (e) {
