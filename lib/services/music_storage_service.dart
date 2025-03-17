@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_media_metadata/flutter_media_metadata.dart';
-import 'package:path_provider/path_provider.dart';
 
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,6 +10,7 @@ import 'package:musicplayer/models/music.dart';
 
 class MusicStorageService {
   static const String _musicListKey = 'music_list';
+  static const String _musicFolderKey = 'music_folder';
   static const String _lastPlayedMusicKey = 'last_played_music';
   static const List<String> _allowedExtensions = [
     '.mp3',
@@ -47,6 +47,9 @@ class MusicStorageService {
         await openAppSettings();
         return false;
       }
+      debugPrint("🔍 Storage permission: ${await Permission.storage.isGranted}");
+      debugPrint("🔍 Manage External Storage: ${await Permission.manageExternalStorage.isGranted}");
+
     }
     return true;
   }
@@ -69,10 +72,6 @@ class MusicStorageService {
 
     // Ouvre le sélecteur de dossier
     String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
-    selectedDirectory = await getAbsolutePath(selectedDirectory ?? "");
-
-    debugPrint("Selected Directory (raw): $selectedDirectory");
-
     if (selectedDirectory == null) {
       debugPrint("Aucun dossier sélectionné");
       return [];
@@ -86,8 +85,15 @@ class MusicStorageService {
       );
       return [];
     }
-    List<FileSystemEntity> files = directory.listSync(recursive: false);
+    
+    List folderPaths = await getMusicFolderPaths();
+    debugPrint("📂 Dossiers enregistrés : $folderPaths");
+    if (folderPaths.contains(selectedDirectory)) {
+      debugPrint("Le dossier est déjà enregistré");
+      return await loadMusicList();
+    }
 
+    List<FileSystemEntity> files = directory.listSync();
     if (files.isEmpty) {
       debugPrint("���️ Aucun fichier audio trouvé dans le dossier sélectionné");
       return [];
@@ -96,11 +102,13 @@ class MusicStorageService {
     List<Music> newMusicList = [];
 
     for (var file in files) {
+      debugPrint("!! Creating new music list with file: ${file.path}");
       if (file is File && _allowedExtensions.any(file.path.endsWith)) {
+        debugPrint("🔍 Traitement du fichier : ${file.path}");
         try {
+          debugPrint("➡️ Début de l'extraction des métadonnées...");
           final metadata = await MetadataRetriever.fromFile(File(file.path));
-
-          debugPrint("Metadata Retriever: $metadata");
+          debugPrint("✅ Métadonnées extraites avec succès !");
 
           newMusicList.add(
             Music(
@@ -123,36 +131,34 @@ class MusicStorageService {
       return [];
     }
 
+    debugPrint("New music list $newMusicList ------");
+
     // Mise à jour et sauvegarde de la liste des musiques
+    folderPaths.add(selectedDirectory);
     List<Music> lastMusicList = await loadMusicList();
     List<Music> allMusic = [...lastMusicList, ...newMusicList];
     allMusic = allMusic..sort((a, b) => a.artist.compareTo(b.artist));
-    await saveMusicList(allMusic);
+    await saveMusicList(allMusic, folderPaths);
 
     debugPrint("✅ ${allMusic.length} musiques chargées !");
     return allMusic;
   }
 
-  static Future<String?> getAbsolutePath(String uri) async {
-    if (uri.startsWith("content://")) {
-      try {
-        Directory? directory = await getExternalStorageDirectory();
-        if (directory != null) {
-          String possiblePath = directory.path + uri.split("primary:")[1];
-          return possiblePath;
-        }
-      } catch (e) {
-        debugPrint("❌ Erreur de conversion de l'URI : $e");
-      }
-    }
-    return uri; // Retourne le chemin original si ce n'est pas une URI
-  }
-
   // Sauvegarder la liste des musiques dans SharedPreferences
-  static Future<void> saveMusicList(List<Music> musicList) async {
+  static Future<void> saveMusicList(List<Music> musicList, List folderPaths) async {
     final prefs = await SharedPreferences.getInstance();
     final musicJsonList = musicList.map((music) => music.toJson()).toList();
     await prefs.setString(_musicListKey, jsonEncode(musicJsonList));
+    await prefs.setString(_musicFolderKey, jsonEncode(folderPaths));
+  }
+
+  static Future<List> getMusicFolderPaths() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? paths = prefs.getString(_musicFolderKey);
+    if (paths != null) {
+      return jsonDecode(paths);
+    }
+    return [];
   }
 
   // Charger la liste des musiques
