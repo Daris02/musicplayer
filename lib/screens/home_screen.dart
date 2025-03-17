@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:musicplayer/models/music.dart';
@@ -207,18 +209,24 @@ class _HomeScreenState extends State<HomeScreen> {
   // Lecteur de musique en plein écran avec animation
   Widget _buildExpandedPlayer() {
     return Container(
-      padding: EdgeInsets.all(20),
-      color: Colors.black,
+      padding: EdgeInsets.all(10),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          Container(
+            height: 200,
+            width: 200,
+            child: _currentMusic?.coverArt != null ?
+              Image.memory(_currentMusic?.coverArt ?? Uint8List(0), fit: BoxFit.cover)
+              : Icon(Icons.music_note, size: 75)
+          ),
           // Animation du titre qui s'agrandit depuis le mini-player
           AnimatedDefaultTextStyle(
             duration: Duration(milliseconds: 300),
             style: TextStyle(
               fontSize: 24 + (16 * _panelPosition), // Taille du texte dynamique
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Colors.black,
             ),
             child: Text(
               _currentMusic?.title ?? "Aucune musique",
@@ -231,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(
               fontSize: 15 + (16 * _panelPosition), // Taille du texte dynamique
               fontWeight: FontWeight.normal,
-              color: const Color.fromARGB(136, 255, 255, 255),
+              color: const Color.fromARGB(135, 0, 0, 0),
             ),
             child: Text(
               _currentMusic?.artist ?? '',
@@ -275,18 +283,18 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                icon: Icon(Icons.skip_previous, color: Colors.white),
+                icon: Icon(Icons.skip_previous, color: Colors.black),
                 onPressed: _playPrevious,
               ),
               IconButton(
                 icon: Icon(
                   _isPlaying ? Icons.pause : Icons.play_arrow,
-                  color: Colors.white,
+                  color: Colors.black,
                 ),
                 onPressed: () => _playMusic(_currentMusic!),
               ),
               IconButton(
-                icon: Icon(Icons.skip_next, color: Colors.white),
+                icon: Icon(Icons.skip_next, color: Colors.black),
                 onPressed: _playNext,
               ),
             ],

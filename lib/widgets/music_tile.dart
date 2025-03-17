@@ -15,7 +15,6 @@ class MusicTile extends StatelessWidget {
       leading: music.coverArt != null
           ? Image.memory(music.coverArt ?? Uint8List(0), width: 50, height: 50, fit: BoxFit.cover)
           : Icon(Icons.music_note, size: 50),
-          // Icon(Icons.music_note, size: 50),
       title: Text(music.title, style: TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Text(music.artist != '' ? music.artist : 'unknown artist'),
       onTap: onTap,
