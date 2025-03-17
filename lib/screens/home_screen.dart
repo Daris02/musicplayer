@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 
 import 'package:musicplayer/models/music.dart';
