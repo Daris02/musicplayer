@@ -15,7 +15,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const SplashScreen(), // Démarrage avec le SplashScreen
+      home: const SplashScreen(),
     );
   }
 }
@@ -48,14 +48,14 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.music_note, size: 80, color: Colors.white), // Icône personnalisée
+            const Icon(Icons.music_note, size: 80, color: Colors.white),
             const SizedBox(height: 20),
             const Text(
               'MusicPlayer',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
             ),
             const SizedBox(height: 20),
-            const CircularProgressIndicator(color: Colors.white), // Animation de chargement
+            const CircularProgressIndicator(color: Colors.white),
           ],
         ),
       ),
