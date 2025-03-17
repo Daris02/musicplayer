@@ -13,54 +13,46 @@ class MusicStorageService {
   static const String _lastPlayedMusicKey = 'last_played_music';
   static const List<String> _allowedExtensions = ['.mp3', '.wav', '.flac', '.m4a'];
 
-  // Sauvegarder la liste des musiques dans SharedPreferences
-  static Future<void> saveMusicList(List<Music> musicList) async {
-    final prefs = await SharedPreferences.getInstance();
-    final musicJsonList = musicList.map((music) => music.toJson()).toList();
-    await prefs.setString(_musicListKey, jsonEncode(musicJsonList));
-  }
+  // Vérifier et demander la permission de stockage adaptée à la version Android
+  static Future<bool> requestStoragePermission() async {
+    if (Platform.isAndroid) {
+      int sdkVersion = int.parse(await getSdkVersion());
 
-  // Charger la liste des musiques
-  static Future<List<Music>> loadMusicList() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? musicListJson = prefs.getString(_musicListKey);
+      if (sdkVersion <= 32) {
+        // Android 12 et inférieur : Permission.storage
+        if (!(await Permission.storage.request().isGranted)) {
+          debugPrint("❌ Permission de stockage refusée (Android 12 ou inférieur)");
+          return false;
+        }
+      } else {
+        // Android 13+ : Utiliser READ_MEDIA_AUDIO pour les fichiers audio
+        if (!(await Permission.audio.request().isGranted)) {
+          debugPrint("❌ Permission d'accès aux fichiers audio refusée (Android 13+)");
+          return false;
+        }
+      }
 
-    if (musicListJson != null) {
-      List<dynamic> decodedList = jsonDecode(musicListJson);
-      return decodedList.map((json) => Music.fromJson(json)).toList();
-    }
-    return [];
-  }
-
-  // Sauvegarder la dernière musique jouée
-  static Future<void> saveLastPlayedMusic(Music music) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_lastPlayedMusicKey, music.path);
-  }
-
-  // Charger la dernière musique jouée
-  static Future<Music?> getLastPlayedMusic() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? lastMusicPlayedPath = prefs.getString(_lastPlayedMusicKey);
-    List<Music>? musicLists = await loadMusicList();
-
-    if (lastMusicPlayedPath != null) {
-      try {
-        return musicLists.firstWhere((music) => music.path == lastMusicPlayedPath);
-      } catch (e) {
-        debugPrint(e.toString());
-        debugPrint("⚠️ Aucune musique trouvée avec ce chemin");
-        return null;
+      // Vérifier si l'utilisateur a bloqué définitivement la permission
+      if (await Permission.audio.isPermanentlyDenied || await Permission.storage.isPermanentlyDenied) {
+        debugPrint("⚠️ L'utilisateur a définitivement refusé la permission. Ouvrir les paramètres...");
+        await openAppSettings();
+        return false;
       }
     }
-    return null;
+    return true;
+  }
+
+  // Obtenir la version SDK de l'appareil Android
+  static Future<String> getSdkVersion() async {
+    return await Process.run('getprop', ['ro.build.version.sdk']).then((result) {
+      return result.stdout.toString().trim();
+    });
   }
 
   // Sélectionner un dossier contenant des musiques
   static Future<List<Music>> pickMusicFilesFromFolder() async {
-    PermissionStatus status = await Permission.storage.request();
-    if (!status.isGranted) {
-      debugPrint("Permission refusée pour accéder aux fichiers");
+    bool permissionGranted = await requestStoragePermission();
+    if (!permissionGranted) {
       return [];
     }
 
@@ -107,5 +99,47 @@ class MusicStorageService {
 
     debugPrint("✅ ${allMusic.length} musiques chargées !");
     return allMusic;
+  }
+
+  // Sauvegarder la liste des musiques dans SharedPreferences
+  static Future<void> saveMusicList(List<Music> musicList) async {
+    final prefs = await SharedPreferences.getInstance();
+    final musicJsonList = musicList.map((music) => music.toJson()).toList();
+    await prefs.setString(_musicListKey, jsonEncode(musicJsonList));
+  }
+
+  // Charger la liste des musiques
+  static Future<List<Music>> loadMusicList() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? musicListJson = prefs.getString(_musicListKey);
+    if (musicListJson != null) {
+      List<dynamic> decodedList = jsonDecode(musicListJson);
+      return decodedList.map((json) => Music.fromJson(json)).toList();
+    }
+    return [];
+  }
+
+  // Sauvegarder la dernière musique jouée
+  static Future<void> saveLastPlayedMusic(Music music) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastPlayedMusicKey, music.path);
+  }
+
+  // Charger la dernière musique jouée
+  static Future<Music?> getLastPlayedMusic() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? lastMusicPlayedPath = prefs.getString(_lastPlayedMusicKey);
+    List<Music>? musicLists = await loadMusicList();
+
+    if (lastMusicPlayedPath != null) {
+      try {
+        return musicLists.firstWhere((music) => music.path == lastMusicPlayedPath);
+      } catch (e) {
+        debugPrint(e.toString());
+        debugPrint("⚠️ Aucune musique trouvée avec ce chemin");
+        return null;
+      }
+    }
+    return null;
   }
 }
