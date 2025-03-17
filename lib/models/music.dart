@@ -37,4 +37,9 @@ class Music {
         artwork: json['artwork'],
         coverArt: json['coverArt'],
       );
+
+  @override
+  String toString() {
+    return 'Music{id: $id, title: $title, artist: $artist, album: $album, path: $path, artwork: $artwork, coverArt: $coverArt}';
+  }
 }

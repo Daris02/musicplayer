@@ -2,16 +2,18 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:sliding_up_panel/sliding_up_panel.dart';
+
 import 'package:musicplayer/models/music.dart';
 import 'package:musicplayer/services/music_storage_service.dart';
 import 'package:musicplayer/widgets/music_tile.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:sliding_up_panel/sliding_up_panel.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _HomeScreenState createState() => _HomeScreenState();
 }
 
@@ -24,6 +26,14 @@ class _HomeScreenState extends State<HomeScreen> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   final PanelController _panelController = PanelController();
   double _panelPosition = 0.0;
+  List<IconData> navIcons = [
+    Icons.my_library_music,
+    Icons.album,
+    Icons.menu,
+    Icons.person,
+  ];
+
+  int selectedIndex = 0;
 
   @override
   void initState() {
@@ -159,7 +169,66 @@ class _HomeScreenState extends State<HomeScreen> {
               });
             },
           ),
+          // Align(alignment: Alignment.bottomCenter, child: _navbar()),
         ],
+      ),
+    );
+  }
+
+  Widget _navbar() {
+    return Container(
+      height: 55,
+      margin: EdgeInsets.only(right: 24, left: 24, bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(20),
+            blurRadius: 20,
+            spreadRadius: 10,
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children:
+            navIcons.map((icon) {
+              int index = navIcons.indexOf(icon);
+              bool isSelected = selectedIndex == index;
+              return Material(
+                color: Colors.transparent,
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedIndex = index;
+                    });
+                  },
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        Container(
+                          alignment: Alignment.center,
+                          margin: EdgeInsets.only(
+                            top: 10,
+                            bottom: 0,
+                            left: 24,
+                            right: 24,
+                          ),
+                          child: Icon(
+                            icon,
+                            color: isSelected ? Colors.blue : Colors.grey,
+                            size: 30,
+                          ),
+                        ),
+                        SizedBox(height: 10),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
       ),
     );
   }
@@ -175,8 +244,8 @@ class _HomeScreenState extends State<HomeScreen> {
           color: Colors.blueAccent,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        height:
-            80 + (120 * _panelPosition), // Ajustement de la hauteur dynamique
+        height: 80 + (120 * _panelPosition),
+        // Ajustement de la hauteur dynamique
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -216,9 +285,13 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             height: 200,
             width: 200,
-            child: _currentMusic?.coverArt != null ?
-              Image.memory(_currentMusic?.coverArt ?? Uint8List(0), fit: BoxFit.cover)
-              : Icon(Icons.music_note, size: 75)
+            child:
+                _currentMusic?.coverArt != null
+                    ? Image.memory(
+                      _currentMusic?.coverArt ?? Uint8List(0),
+                      fit: BoxFit.cover,
+                    )
+                    : Icon(Icons.music_note, size: 75),
           ),
           // Animation du titre qui s'agrandit depuis le mini-player
           AnimatedDefaultTextStyle(
@@ -253,10 +326,7 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                _formatDuration(_position),
-                style: TextStyle(fontSize: 14),
-              ),
+              Text(_formatDuration(_position), style: TextStyle(fontSize: 14)),
               // Animation du Slider (apparition fluide)
               AnimatedOpacity(
                 duration: Duration(milliseconds: 100),
@@ -272,10 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               ),
-              Text(
-                _formatDuration(_duration),
-                style: TextStyle(fontSize: 14),
-              ),
+              Text(_formatDuration(_duration), style: TextStyle(fontSize: 14)),
             ],
           ),
           // Boutons de contrôle avec animation
