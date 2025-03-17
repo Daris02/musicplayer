@@ -83,10 +83,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (query.isEmpty) {
         _filteredMusicList = List.from(_musicList);
       } else {
-        _filteredMusicList = _musicList.where((music) {
-          return music.title.toLowerCase().contains(query) ||
-              music.artist.toLowerCase().contains(query);
-        }).toList();
+        _filteredMusicList =
+            _musicList.where((music) {
+              return music.title.toLowerCase().contains(query) ||
+                  music.artist.toLowerCase().contains(query);
+            }).toList();
       }
     });
   }
@@ -180,29 +181,33 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-          controller: _searchController,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: "Rechercher une chanson ou un artiste...",
-            hintStyle: const TextStyle(color: Colors.black54),
-            border: InputBorder.none,
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.clear, color: Colors.black54),
-              onPressed: () {
-                _searchController.clear();
-              },
-            ),
-          ),
-          style: const TextStyle(color: Colors.black, fontSize: 16),
-        )
-            : const Text(
-          'Music Player',
-          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold),
-        ),
+        title:
+            _isSearching
+                ? TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: "Rechercher une chanson ou un artiste...",
+                    hintStyle: const TextStyle(color: Colors.black54),
+                    border: InputBorder.none,
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.clear, color: Colors.black54),
+                      onPressed: () {
+                        _searchController.clear();
+                      },
+                    ),
+                  ),
+                  style: const TextStyle(color: Colors.black, fontSize: 16),
+                )
+                : const Text(
+                  'Music Player',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
         centerTitle: true,
-        backgroundColor: Colors.blueAccent.withOpacity(0.8),
+        backgroundColor: Colors.blueAccent.withAlpha(200),
         elevation: 0,
         actions: [
           IconButton(
@@ -219,25 +224,32 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Stack(
         children: [
           Container(
-            color: Colors.grey[100],
-            child: _filteredMusicList.isEmpty && _musicList.isEmpty
-                ? const Center(child: CircularProgressIndicator()) // Indicateur de chargement
-                : ListView.builder(
-              itemCount: _filteredMusicList.length,
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: MusicTile(
-                    music: _filteredMusicList[index],
-                    onTap: () => _playMusic(_filteredMusicList[index]),
-                  ),
-                );
-              },
-            ),
+            color: Colors.black,
+            child:
+                _filteredMusicList.isEmpty && _musicList.isEmpty
+                    ? const Center(
+                      child: CircularProgressIndicator(),
+                    ) // Indicateur de chargement
+                    : ListView.builder(
+                      itemCount: _filteredMusicList.length,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          child: MusicTile(
+                            music: _filteredMusicList[index],
+                            onTap: () => _playMusic(_filteredMusicList[index]),
+                          ),
+                        );
+                      },
+                    ),
           ),
           SlidingUpPanel(
             controller: _panelController,
             minHeight: 60,
+            backdropEnabled: false,
             maxHeight: MediaQuery.of(context).size.height * 0.8,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             panelBuilder: (sc) => _buildExpandedPlayer(),
@@ -248,217 +260,191 @@ class _HomeScreenState extends State<HomeScreen> {
               });
             },
           ),
-          // Align(alignment: Alignment.bottomCenter, child: _navbar()),
         ],
       ),
     );
   }
 
-  Widget _navbar() {
+  Widget _buildMiniPlayer() {
     return Container(
       height: 55,
       margin: EdgeInsets.only(right: 24, left: 24, bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.black,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(20),
+            color: Colors.white.withAlpha(20),
             blurRadius: 20,
             spreadRadius: 10,
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children:
-            navIcons.map((icon) {
-              int index = navIcons.indexOf(icon);
-              bool isSelected = selectedIndex == index;
-              return Material(
-                color: Colors.transparent,
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      selectedIndex = index;
-                    });
-                  },
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        Container(
-                          alignment: Alignment.center,
-                          margin: EdgeInsets.only(
-                            top: 10,
-                            bottom: 0,
-                            left: 24,
-                            right: 24,
-                          ),
-                          child: Icon(
-                            icon,
-                            color: isSelected ? Colors.blue : Colors.grey,
-                            size: 30,
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                      ],
+      child: GestureDetector(
+        onTap: () => _panelController.open(),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.black, // Remplacement ici
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.white12,
+                offset: Offset(0, 2),
+                blurRadius: 8,
+                spreadRadius: 0,
+              ),
+            ],
+          ),
+          height: 50 + (80 * _panelPosition),
+          child: Row(
+            children: [
+              const Icon(Icons.music_note, size: 24, color: Colors.white54),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 300),
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14 + (10 * _panelPosition),
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                      ),
+                      child: Text(
+                        _currentMusic?.title ?? "Aucune musique",
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ),
-              );
-            }).toList(),
-      ),
-    );
-  }
-
-  // Mini Player avec animation fluide du titre
-  Widget _buildMiniPlayer() {
-    return GestureDetector(
-      onTap: () => _panelController.open(),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: Color.fromRGBO(238, 238, 238, 0.9), // Remplacement ici
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              offset: Offset(0, 2),
-              blurRadius: 8,
-              spreadRadius: 0,
-            ),
-          ],
-        ),
-        height: 60 + (80 * _panelPosition),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.music_note,
-              size: 24,
-              color: Colors.black54,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 300),
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 14 + (10 * _panelPosition),
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Poppins',
-                    ),
-                    child: Text(
-                      _currentMusic?.title ?? "Aucune musique",
+                    Text(
+                      _currentMusic?.artist ?? "Artiste inconnu",
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 12,
+                        fontFamily: 'Poppins',
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Text(
-                    _currentMusic?.artist ?? "Artiste inconnu",
-                    style: const TextStyle(
-                      color: Colors.black54,
-                      fontSize: 12,
-                      fontFamily: 'Poppins',
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            IconButton(
-              icon: Icon(
-                _isPlaying ? Icons.pause : Icons.play_arrow,
-                color: Colors.black87,
-                size: 28,
+              IconButton(
+                icon: Icon(
+                  _isPlaying ? Icons.pause : Icons.play_arrow,
+                  color: Colors.white70,
+                  size: 28,
+                ),
+                onPressed:
+                    _currentMusic != null
+                        ? () => _playMusic(_currentMusic!)
+                        : null,
               ),
-              onPressed: _currentMusic != null ? () => _playMusic(_currentMusic!) : null,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildExpandedPlayer() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: _currentMusic?.coverArt != null
-                ? Image.memory(_currentMusic!.coverArt!, height: 200, width: 200, fit: BoxFit.cover)
-                : const Icon(Icons.music_note, size: 75),
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,      
+      children: [
+        Container(
+          child:
+              _currentMusic?.coverArt != null
+                  ? Image.memory(
+                    _currentMusic!.coverArt!,
+                    height: 200,
+                    width: 200,
+                    fit: BoxFit.cover,
+                  )
+                  : const Icon(Icons.music_note, size: 75),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          _currentMusic?.title ?? "Aucune musique",
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Poppins',
           ),
-          const SizedBox(height: 20),
-          Text(
-            _currentMusic?.title ?? "Aucune musique",
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Poppins',
+          textAlign: TextAlign.center,
+        ),
+        Text(
+          _currentMusic?.artist ?? '',
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.white,
+            fontFamily: 'Poppins',
+          ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Text(
+              _formatDuration(_position),
+              style: const TextStyle(fontSize: 12),
             ),
-            textAlign: TextAlign.center,
-          ),
-          Text(
-            _currentMusic?.artist ?? '',
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-              fontFamily: 'Poppins',
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Text(_formatDuration(_position), style: const TextStyle(fontSize: 12)),
-              Expanded(
-                child: SliderTheme(
-                  data: SliderThemeData(
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
-                    trackHeight: 4,
+            Expanded(
+              child: SliderTheme(
+                data: SliderThemeData(
+                  thumbShape: const RoundSliderThumbShape(
+                    enabledThumbRadius: 8,
                   ),
-                  child: Slider(
-                    value: _position.inSeconds.toDouble(),
-                    max: _duration.inSeconds.toDouble(),
-                    activeColor: Colors.blueAccent,
-                    inactiveColor: Colors.grey[300],
-                    onChanged: (value) {
-                      _audioPlayer.seek(Duration(seconds: value.toInt()));
-                      setState(() => _position = Duration(seconds: value.toInt()));
-                    },
+                  overlayShape: const RoundSliderOverlayShape(
+                    overlayRadius: 16,
                   ),
+                  trackHeight: 4,
+                ),
+                child: Slider(
+                  value: _position.inSeconds.toDouble(),
+                  max: _duration.inSeconds.toDouble(),
+                  activeColor: Colors.blueAccent,
+                  inactiveColor: Colors.grey[300],
+                  onChanged: (value) {
+                    _audioPlayer.seek(Duration(seconds: value.toInt()));
+                    setState(
+                      () => _position = Duration(seconds: value.toInt()),
+                    );
+                  },
                 ),
               ),
-              Text(_formatDuration(_duration), style: const TextStyle(fontSize: 12)),
-            ],
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.skip_previous, size: 36),
-                onPressed: _playPrevious,
+            ),
+            Text(
+              _formatDuration(_duration),
+              style: const TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.skip_previous, size: 36),
+              onPressed: _playPrevious,
+            ),
+            IconButton(
+              icon: Icon(
+                _isPlaying ? Icons.pause_circle : Icons.play_circle,
+                size: 48,
               ),
-              IconButton(
-                icon: Icon(_isPlaying ? Icons.pause_circle : Icons.play_circle, size: 48),
-                onPressed: _currentMusic != null ? () => _playMusic(_currentMusic!) : null,
-              ),
-              IconButton(
-                icon: const Icon(Icons.skip_next, size: 36),
-                onPressed: _playNext,
-              ),
-            ],
-          ),
-        ],
-      ),
+              onPressed:
+                  _currentMusic != null
+                      ? () => _playMusic(_currentMusic!)
+                      : null,
+            ),
+            IconButton(
+              icon: const Icon(Icons.skip_next, size: 36),
+              onPressed: _playNext,
+            ),
+          ],
+        ),
+      ],
     );
   }
 
