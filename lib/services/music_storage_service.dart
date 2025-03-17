@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:audiotags/audiotags.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_media_metadata/flutter_media_metadata.dart';
@@ -107,16 +108,18 @@ class MusicStorageService {
         debugPrint("🔍 Traitement du fichier : ${file.path}");
         try {
           debugPrint("➡️ Début de l'extraction des métadonnées...");
-          final metadata = await MetadataRetriever.fromFile(File(file.path));
+          // final metadata = await MetadataRetriever.fromFile(File(file.path));
+          Tag? tag = await AudioTags.read(file.path);
+          debugPrint("Tag Picture: ${tag?.pictures}");
           debugPrint("✅ Métadonnées extraites avec succès !");
 
           newMusicList.add(
             Music(
               path: file.path,
-              title: metadata.trackName ?? file.uri.pathSegments.last,
-              artist: metadata.albumArtistName ?? "Inconnu",
-              album: metadata.albumName ?? "Inconnu",
-              coverArt: metadata.albumArt,
+              title: tag?.title ?? file.uri.pathSegments.last,
+              artist: tag?.trackArtist ??  tag?.albumArtist ?? "unknown",
+              album: tag?.album ?? "unknown",
+              coverArt: tag?.pictures[0].bytes,
               id: file.hashCode.toString(),
             ),
           );
@@ -130,8 +133,6 @@ class MusicStorageService {
       debugPrint("⚠️ Aucun fichier audio trouvé dans le dossier sélectionné");
       return [];
     }
-
-    debugPrint("New music list $newMusicList ------");
 
     // Mise à jour et sauvegarde de la liste des musiques
     folderPaths.add(selectedDirectory);
