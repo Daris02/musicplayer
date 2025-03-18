@@ -1,9 +1,22 @@
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/material.dart';
-import 'package:musicplayer/screens/playlist_screen.dart';
+import 'package:just_audio_background/just_audio_background.dart';
+
 import 'screens/home_screen.dart';
 
-void main() {
-  runApp(const MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await JustAudioBackground.init(
+    androidNotificationChannelId: 'com.ryanheise.bg_demo.channel.audio',
+    androidNotificationChannelName: 'Audio playback',
+    androidNotificationOngoing: true,
+  );
+
+  final session = await AudioSession.instance;
+  await session.configure(AudioSessionConfiguration.music());
+
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -14,7 +27,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
-      home: const SplashScreen(),
+      home: SplashScreen(),
     );
   }
 }
@@ -43,7 +56,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     Future.delayed(const Duration(seconds: 3), () {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => HomeScreen()),
       );
     });
   }

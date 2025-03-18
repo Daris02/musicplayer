@@ -1,12 +1,13 @@
 import 'dart:io';
 import 'dart:convert';
-import 'package:audiotags/audiotags.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
 
+import 'package:flutter_media_metadata/flutter_media_metadata.dart';
+import 'package:musicplayer/models/music.dart';
+
+import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:musicplayer/models/music.dart';
 
 import '../models/playlist.dart';
 
@@ -109,18 +110,16 @@ class MusicStorageService {
         debugPrint("🔍 Traitement du fichier : ${file.path}");
         try {
           debugPrint("➡️ Début de l'extraction des métadonnées...");
-          // final metadata = await MetadataRetriever.fromFile(File(file.path));
-          Tag? tag = await AudioTags.read(file.path);
-          debugPrint("Tag Picture: ${tag?.pictures}");
+          final metadata = await MetadataRetriever.fromFile(File(file.path));
           debugPrint("✅ Métadonnées extraites avec succès !");
 
           newMusicList.add(
             Music(
               path: file.path,
-              title: tag?.title ?? file.uri.pathSegments.last,
-              artist: tag?.trackArtist ??  tag?.albumArtist ?? "unknown",
-              album: tag?.album ?? "unknown",
-              coverArt: tag?.pictures[0].bytes,
+              title: metadata.trackName ?? file.uri.pathSegments.last,
+              artist: metadata.albumArtistName ?? "Inconnu",
+              album: metadata.albumName ?? "Inconnu",
+              coverArt: metadata.albumArt,
               id: file.hashCode.toString(),
             ),
           );
