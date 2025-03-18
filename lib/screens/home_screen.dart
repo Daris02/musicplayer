@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:musicplayer/screens/playlist_screen.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 
 import 'package:musicplayer/models/music.dart';
 import 'package:musicplayer/services/music_storage_service.dart';
 import 'package:musicplayer/widgets/music_tile.dart';
+
+import '../models/playlist.dart';
+import '../services/playlist_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -211,6 +215,15 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.library_music), // Icône de playlist
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PlaylistScreen()),
+              );
+            },
+          ),
+          IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),
             onPressed: _toggleSearch,
           ),
@@ -332,16 +345,76 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              IconButton(
-                icon: Icon(
-                  _isPlaying ? Icons.pause : Icons.play_arrow,
-                  color: Colors.white70,
-                  size: 28,
-                ),
-                onPressed:
-                    _currentMusic != null
-                        ? () => _playMusic(_currentMusic!)
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.add, color: Colors.white70, size: 28), // Ajout du bouton "+"
+                    onPressed: _currentMusic != null
+                        ? () {
+                      PlaylistService.addToPlaylist(_currentMusic!);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('${_currentMusic!.title} ajouté à la playlist !')),
+                      );
+                    }
                         : null,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add, color: Colors.white70, size: 28), // Bouton "+"
+                    onPressed: _currentMusic != null
+                        ? () async {
+                      // Charger les playlists existantes
+                      List<Playlist> playlists = await MusicStorageService.loadPlaylists();
+
+                      if (playlists.isEmpty) {
+                        // Si aucune playlist n'existe
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Crée une playlist d'abord")),
+                        );
+                      } else {
+                        // Afficher une boîte de dialogue avec les playlists
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text("Ajouter à une playlist"),
+                            content: SizedBox(
+                              width: double.maxFinite,
+                              child: ListView.builder(
+                                shrinkWrap: true,
+                                itemCount: playlists.length,
+                                itemBuilder: (context, index) {
+                                  return ListTile(
+                                    title: Text(playlists[index].name),
+                                    onTap: () {
+                                      // Ajouter la musique à la playlist sélectionnée
+                                      playlists[index].addSong(_currentMusic!);
+                                      // Sauvegarder les modifications
+                                      MusicStorageService.savePlaylists(playlists);
+                                      Navigator.pop(context); // Fermer la boîte de dialogue
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            "${_currentMusic!.title} ajouté à ${playlists[index].name} !",
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text("Annuler"),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    }
+                        : null,
+                  ),
+                ],
               ),
             ],
           ),

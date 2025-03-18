@@ -8,6 +8,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:musicplayer/models/music.dart';
 
+import '../models/playlist.dart';
+
 class MusicStorageService {
   static const String _musicListKey = 'music_list';
   static const String _musicFolderKey = 'music_folder';
@@ -196,5 +198,25 @@ class MusicStorageService {
       }
     }
     return null;
+  }
+
+  static const String _playlistKey = 'playlists';
+
+// Sauvegarder les playlists dans SharedPreferences
+  static Future<void> savePlaylists(List<Playlist> playlists) async {
+    final prefs = await SharedPreferences.getInstance();
+    final playlistJsonList = playlists.map((playlist) => playlist.toJson()).toList();
+    await prefs.setString(_playlistKey, jsonEncode(playlistJsonList));
+  }
+
+// Charger les playlists
+  static Future<List<Playlist>> loadPlaylists() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? playlistsJson = prefs.getString(_playlistKey);
+    if (playlistsJson != null) {
+      List<dynamic> decodedList = jsonDecode(playlistsJson);
+      return decodedList.map((json) => Playlist.fromJson(json)).toList();
+    }
+    return [];
   }
 }

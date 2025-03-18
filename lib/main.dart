@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:musicplayer/screens/playlist_screen.dart';
 import 'screens/home_screen.dart';
 
 void main() {

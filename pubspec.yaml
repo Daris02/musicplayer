@@ -23,6 +23,8 @@ dependencies:
   provider: ^6.1.2
   shared_preferences: ^2.5.2
   sliding_up_panel: ^2.0.0+1
+  audio_service: ^0.18.12
+
 
 
 dev_dependencies:
