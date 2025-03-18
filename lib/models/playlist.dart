@@ -1,4 +1,4 @@
-import 'package:musicplayer/models/music.dart';
+import 'music.dart';
 
 class Playlist {
   final String name;

@@ -1,23 +1,32 @@
-import 'package:flutter/material.dart';
 import '../models/music.dart';
 import '../models/playlist.dart';
+import 'package:musicplayer/services/storage_service.dart';
 
 class PlaylistService {
-  static final List<Music> _playlist = [];
-
-  static List<Music> getPlaylist() => _playlist;
-
-  static void addToPlaylist(Music song) {
-    if (!_playlist.contains(song)) {
-      _playlist.add(song);
-    }
+  static Future<void> addMusicToPlaylist(Playlist playlist, Music music) async {
+    playlist.addSong(music);
+    List<Playlist> playlists = await StorageService.loadPlaylists();
+    playlists.add(playlist);
+    await StorageService.savePlaylists(playlists);
   }
 
-  static void removeFromPlaylist(Music song) {
-    _playlist.remove(song);
+  static Future<void> removeMusicFromPlaylist(Playlist playlist, Music music) async {
+    playlist.removeSong(music);
+    List<Playlist> playlists = await StorageService.loadPlaylists();
+    playlists.add(playlist);
+    await StorageService.savePlaylists(playlists);
   }
 
-  static void clearPlaylist() {
-    _playlist.clear();
+  static Future<void> createPlaylist(String name) async {
+    Playlist newPlaylist = Playlist(name: name);
+    List<Playlist> playlists = await StorageService.loadPlaylists();
+    playlists.add(newPlaylist);
+    await StorageService.savePlaylists(playlists);
+  }
+
+  static Future<void> deletePlaylist(Playlist playlist) async {
+    List<Playlist> playlists = await StorageService.loadPlaylists();
+    playlists.remove(playlist);
+    await StorageService.savePlaylists(playlists);
   }
 }

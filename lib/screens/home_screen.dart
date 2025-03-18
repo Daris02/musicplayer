@@ -21,7 +21,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<Music> _musicList = [];
-  List<Music> _filteredMusicList = []; // Liste filtrée pour l'affichage
+  List<Music> _filteredMusicList = [];
   Music? _currentMusic;
   bool _isPlaying = false;
   Duration _position = Duration.zero;
@@ -380,7 +380,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: const Icon(Icons.add, color: Colors.white70, size: 28), // Ajout du bouton "+"
                     onPressed: _currentMusic != null
                         ? () {
-                      PlaylistService.addToPlaylist(_currentMusic!);
+                      // PlaylistService.addMusicToPlaylist(_currentMusic!);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('${_currentMusic!.title} ajouté à la playlist !')),
                       );

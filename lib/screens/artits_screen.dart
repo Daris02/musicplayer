@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
 
-class ArtitsScreen extends StatefulWidget {
-  const ArtitsScreen({ super.key });
+class ArtistsScreen extends StatelessWidget {
+  const ArtistsScreen({Key? key}) : super(key: key);
 
-  @override
-  _ArtitsScreenState createState() => _ArtitsScreenState();
-}
-
-class _ArtitsScreenState extends State<ArtitsScreen> {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      
+    return Scaffold(
+      appBar: AppBar(title: const Text('Artists')),
+      body: Center(
+        child: ListView.builder(
+          itemCount: 10, // Remplacer par le nombre d'artistes
+          itemBuilder: (context, index) {
+            return ListTile(
+              title: Text('Artist ${index + 1}'),
+              onTap: () {
+                // TODO: Implémenter l'action à effectuer lorsqu'un artiste est sélectionné
+              },
+            );
+          },
+        ),
+      ),
     );
   }
 }
