@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 
 import 'package:musicplayer/models/music.dart';
@@ -26,34 +27,39 @@ class _HomeScreenState extends State<HomeScreen> {
   double _panelPosition = 0.0;
   bool _isSearching = false; // État pour afficher ou masquer la SearchBar
   final TextEditingController _searchController = TextEditingController();
-  List<IconData> navIcons = [
-    Icons.my_library_music,
-    Icons.album,
-    Icons.menu,
-    Icons.person,
-  ];
-
-  int selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _initializeMusicData(); // Nouvelle méthode pour gérer l'initialisation
 
-    _audioPlayer.onPositionChanged.listen((pos) {
+    // Mettre à jour la position actuelle
+    _audioPlayer.positionStream.listen((pos) {
       setState(() {
         _position = pos;
       });
     });
 
-    _audioPlayer.onPlayerComplete.listen((event) {
-      _playNext();
+    // Mettre à jour la durée totale
+    _audioPlayer.durationStream.listen((dur) {
+      setState(() {
+        _duration = dur ?? Duration.zero;
+      });
     });
 
-    _audioPlayer.onDurationChanged.listen((dur) {
-      setState(() {
-        _duration = dur;
-      });
+    // Vérifier quand la lecture est terminée
+    _audioPlayer.processingStateStream.listen((state) {
+      if (state == ProcessingState.completed) {
+        _playNext();
+      }
+    });
+
+    _audioPlayer.currentIndexStream.listen((index) {
+      if (index != null && index >= 0 && index < _musicList.length) {
+        setState(() {
+          _currentMusic = _musicList[index];
+        });
+      }
     });
 
     // Écouter les changements dans le champ de recherche
@@ -63,15 +69,19 @@ class _HomeScreenState extends State<HomeScreen> {
   // Nouvelle méthode pour initialiser les données de musique
   Future<void> _initializeMusicData() async {
     try {
-      await _loadMusicList(); // Charge la liste des musiques
-      await _restoreLastPlayedMusic(); // Restaure la dernière musique jouée
+      await _loadMusicList();
+      if (_musicList.isEmpty) {
+        debugPrint("Aucune musique trouvée.");
+        return;
+      }
+      await _restoreLastPlayedMusic();
       setState(() {
-        _filteredMusicList = List.from(_musicList); // Synchronise immédiatement
+        _filteredMusicList = List.from(_musicList);
       });
     } catch (e) {
       print("Erreur lors de l'initialisation des données : $e");
       setState(() {
-        _filteredMusicList = []; // Affiche une liste vide en cas d'erreur
+        _filteredMusicList = [];
       });
     }
   }
@@ -130,24 +140,31 @@ class _HomeScreenState extends State<HomeScreen> {
           _isPlaying = false;
         });
       } else {
-        PlayerState state = _audioPlayer.state;
-        if (state == PlayerState.completed || state == PlayerState.stopped) {
-          await _audioPlayer.play(DeviceFileSource(music.path));
-        } else {
-          await _audioPlayer.resume();
-        }
+        await _audioPlayer.play();
         setState(() {
           _isPlaying = true;
         });
       }
     } else {
       await _audioPlayer.stop();
-      await _audioPlayer.play(DeviceFileSource(music.path));
-      await MusicStorageService.saveLastPlayedMusic(music);
+      await _audioPlayer.setAudioSource(
+        AudioSource.uri(
+          Uri.file(music.path),
+          tag: MediaItem(
+            id: music.path,
+            title: music.title,
+            artist: music.artist,
+          ),
+        ),
+      );
+      
+      await _audioPlayer.play();
       setState(() {
-        _currentMusic = music;
+        // _currentMusic = music;
         _isPlaying = true;
       });
+
+      await MusicStorageService.saveLastPlayedMusic(_currentMusic!);
     }
   }
 
@@ -175,6 +192,13 @@ class _HomeScreenState extends State<HomeScreen> {
       _musicList.addAll(result);
       _filteredMusicList = List.from(_musicList); // Synchronise après ajout
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _audioPlayer.dispose(); // Ajout pour éviter les fuites de mémoire
+    super.dispose();
   }
 
   @override
@@ -228,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child:
                 _filteredMusicList.isEmpty && _musicList.isEmpty
                     ? const Center(
-                      child: CircularProgressIndicator(),
+                      child: Icon(Icons.create_new_folder_outlined),
                     ) // Indicateur de chargement
                     : ListView.builder(
                       itemCount: _filteredMusicList.length,
@@ -240,7 +264,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           child: MusicTile(
                             music: _filteredMusicList[index],
-                            onTap: () => _playMusic(_filteredMusicList[index]),
+                            onTap: () => {
+                              _playMusic(_filteredMusicList[index]),
+                              setState(() {
+                                _currentMusic = _filteredMusicList[index];
+                              })
+                            },
                           ),
                         );
                       },
@@ -352,7 +381,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildExpandedPlayer() {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,      
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Container(
           child:
@@ -453,12 +482,5 @@ class _HomeScreenState extends State<HomeScreen> {
     String minutes = twoDigits(duration.inMinutes);
     String seconds = twoDigits(duration.inSeconds.remainder(60));
     return "$minutes:$seconds";
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _audioPlayer.dispose(); // Ajout pour éviter les fuites de mémoire
-    super.dispose();
   }
 }
