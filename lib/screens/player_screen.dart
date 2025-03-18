@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:musicplayer/services/music_player_service.dart';
+import 'package:musicplayer/widgets/music_tile.dart';
 
 class PlayerScreen extends StatefulWidget {
-  const PlayerScreen({super.key});
+  const PlayerScreen({super.key, required MusicPlayerService musicPlayerService});
 
   @override
   _PlayerScreenState createState() => _PlayerScreenState();
@@ -12,13 +13,25 @@ class _PlayerScreenState extends State<PlayerScreen> {
   final MusicPlayerService musicPlayerService = MusicPlayerService();
   bool _isPlaying = false;
   
+
+  @override
+  void initState() {
+    super.initState();
+    setState(() {}); // Pour forcer le rafraîchissement après le chargement des musiques
+
+    // Vérifie si les musiques sont bien chargées
+    Future.delayed(Duration.zero, () {
+      debugPrint("Liste de musiques : ${musicPlayerService.musicList}");
+    });
+  }
+
   // Fonction pour basculer entre jouer et mettre en pause
-  void _togglePlayPause() {
+  void _togglePlayPause(music) {
     if (_isPlaying) {
-      musicPlayerService.togglePlayPause(musicPlayerService.currentMusic!);
+      musicPlayerService.togglePlayPause(music);
     } else {
       // Vous pouvez fournir l'objet Music avec la musique à jouer
-      musicPlayerService.togglePlayPause(musicPlayerService.currentMusic!);
+      musicPlayerService.togglePlayPause(music);
     }
     setState(() {
       _isPlaying = !_isPlaying;
@@ -42,56 +55,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
             child: ListView.builder(
               itemCount: musicPlayerService.musicList.length,
               itemBuilder: (context, index) {
-                debugPrint(" ---- ---- ---- ----- ----- ---- --- -- Music PLayer Service Load\n ${musicPlayerService.musicList.length}");
                 final music = musicPlayerService.musicList[index];
-                return ListTile(
-                  title: Text(music.title),
-                  subtitle: Text(music.artist),
-                  onTap: () => _togglePlayPause(),
-                  trailing: Icon(
-                    musicPlayerService.isPlaying &&
-                            musicPlayerService.currentMusic == music
-                        ? Icons.pause
-                        : Icons.play_arrow,
-                  ),
-                );
+                return MusicTile(music: music, onTap: () => _togglePlayPause(music),);
               },
             ),
           ),
-          // Contrôles de lecture
-          if (musicPlayerService.currentMusic != null)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.skip_previous),
-                    onPressed: () {
-                      setState(() {
-                        musicPlayerService.playPrevious();
-                      });
-                    },
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      musicPlayerService.isPlaying
-                          ? Icons.pause
-                          : Icons.play_arrow,
-                    ),
-                    onPressed: () => _togglePlayPause(),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.skip_next),
-                    onPressed: () {
-                      setState(() {
-                        musicPlayerService.playNext();
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
     );

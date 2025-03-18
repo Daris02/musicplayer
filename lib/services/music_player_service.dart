@@ -6,14 +6,14 @@ import 'music_storage_service.dart';
 import 'package:musicplayer/models/music.dart';
 
 class MusicPlayerService {
-  List<Music> _musicList = [];
+  static List<Music> _musicList = [];
   List<Music> _filteredMusicList = [];
   Music? _currentMusic;
   bool _isPlaying = false;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   final AudioPlayer _audioPlayer = AudioPlayer();
-  
+
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
 
@@ -47,6 +47,9 @@ class MusicPlayerService {
   Future<void> loadMusicList() async {
     List<Music> savedMusicList = await MusicStorageService.loadMusicList();
     _musicList = savedMusicList;
+    if (_musicList.isNotEmpty) {
+      _currentMusic = _musicList[0];
+    }
     _filteredMusicList = List.from(_musicList);
   }
 
@@ -55,6 +58,15 @@ class MusicPlayerService {
     if (music != null) {
       await MusicStorageService.saveLastPlayedMusic(music);
     }
+  }
+
+  Future<void> updatePlaylist() async {
+    List<Music> savedMusicList = await MusicStorageService.loadMusicList();
+    _musicList = savedMusicList;
+    if (_musicList.isNotEmpty) {
+      _currentMusic = _musicList.first;
+    }
+    debugPrint("Musiques mises à jour dans la playlist : $_musicList");
   }
 
   // Lire ou mettre en pause la musique
@@ -72,7 +84,11 @@ class MusicPlayerService {
       await _audioPlayer.setAudioSource(
         AudioSource.uri(
           Uri.file(music.path),
-          tag: MediaItem(id: music.path, title: music.title, artist: music.artist),
+          tag: MediaItem(
+            id: music.path,
+            title: music.title,
+            artist: music.artist,
+          ),
         ),
       );
       await _audioPlayer.play();
@@ -103,7 +119,11 @@ class MusicPlayerService {
     await _audioPlayer.setAudioSource(
       AudioSource.uri(
         Uri.file(music.path),
-        tag: MediaItem(id: music.path, title: music.title, artist: music.artist),
+        tag: MediaItem(
+          id: music.path,
+          title: music.title,
+          artist: music.artist,
+        ),
       ),
     );
     await _audioPlayer.play();
@@ -113,18 +133,19 @@ class MusicPlayerService {
 
   // Filtrer la liste de musique par recherche
   void filterMusicList(String query) {
-    _filteredMusicList = _musicList.where((music) {
-      return music.title.toLowerCase().contains(query.toLowerCase()) ||
-          music.artist.toLowerCase().contains(query.toLowerCase());
-    }).toList();
+    _filteredMusicList =
+        _musicList.where((music) {
+          return music.title.toLowerCase().contains(query.toLowerCase()) ||
+              music.artist.toLowerCase().contains(query.toLowerCase());
+        }).toList();
   }
-  
+
   Future<void> release() async {
     await _audioPlayer.stop();
     _audioPlayer.dispose();
   }
 
-  List<Music> get musicList => _filteredMusicList;
+  List<Music> get musicList => _musicList;
   bool get isPlaying => _isPlaying;
   Music? get currentMusic => _currentMusic;
 }

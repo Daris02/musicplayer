@@ -12,6 +12,7 @@ class MusicTile extends StatelessWidget {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: Colors.white.withAlpha(100),
       child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),

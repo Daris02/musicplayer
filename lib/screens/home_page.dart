@@ -19,18 +19,19 @@ class _HomeScreenState extends State<HomeScreen> {
   final MusicPlayerService musicPlayerService = MusicPlayerService();
   int _selectedIndex = 0;
   late final PageController pageController;
-  final List<Widget> _screens = [
-    PlayerScreen(),
-    ArtistsScreen(),
-    PlaylistScreen(),
-    SettingScreen(),
-  ];
+  late List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
     _initializeMusic();
     pageController = PageController(initialPage: _selectedIndex);
+    _screens = [
+      PlayerScreen(musicPlayerService: musicPlayerService),
+      ArtistsScreen(),
+      PlaylistScreen(),
+      SettingScreen(),
+    ];
   }
 
   Future<void> _initializeMusic() async {
@@ -68,6 +69,72 @@ class _HomeScreenState extends State<HomeScreen> {
         bottom: false,
         child: Stack(
           children: [
+            Positioned(
+              top: 10,
+              left: 0,
+              right: 0,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppSizes.blockSizeHorizontal * 4.5,
+                  0,
+                  AppSizes.blockSizeHorizontal * 4.5,
+                  50,
+                ),
+                child: Material(
+                  borderRadius: BorderRadius.circular(30),
+                  color: Colors.transparent,
+                  elevation: 10,
+                  child: Container(
+                    width: AppSizes.screenWidth,
+                    height: AppSizes.blockSizeHorizontal * 18,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[900],
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.skip_previous),
+                                onPressed: () {
+                                  setState(() {
+                                    musicPlayerService.playPrevious();
+                                  });
+                                },
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  musicPlayerService.isPlaying
+                                      ? Icons.pause
+                                      : Icons.play_arrow,
+                                ),
+                                onPressed:
+                                    () => musicPlayerService.togglePlayPause(
+                                      musicPlayerService.currentMusic!,
+                                    ),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.skip_next),
+                                onPressed: () {
+                                  setState(() {
+                                    musicPlayerService.playNext();
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
             Positioned.fill(
               child: PageView(
                 controller: pageController,
@@ -79,6 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
             ),
+
             Positioned(
               bottom: 0,
               right: 0,
@@ -125,7 +193,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         setState(() {
                           _selectedIndex = val;
                         });
-                        pageController.jumpToPage(val);
+                        pageController.animateToPage(
+                          val,
+                          duration: Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
                       },
                     ),
                     BottomNavBar(
@@ -136,7 +208,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         setState(() {
                           _selectedIndex = val;
                         });
-                        pageController.jumpToPage(val);
+                        pageController.animateToPage(
+                          val,
+                          duration: Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
                       },
                     ),
                     BottomNavBar(
@@ -147,7 +223,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         setState(() {
                           _selectedIndex = val;
                         });
-                        pageController.jumpToPage(val);
+                        pageController.animateToPage(
+                          val,
+                          duration: Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
                       },
                     ),
                     BottomNavBar(
@@ -158,7 +238,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         setState(() {
                           _selectedIndex = val;
                         });
-                        pageController.jumpToPage(val);
+                        pageController.animateToPage(
+                          val,
+                          duration: Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
                       },
                     ),
                   ],
