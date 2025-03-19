@@ -6,117 +6,106 @@ import 'music_storage_service.dart';
 import 'package:musicplayer/models/music.dart';
 
 class MusicPlayerService {
-  static List<Music> _musicList = [];
-  List<Music> _filteredMusicList = [];
-  Music? _currentMusic;
-  bool _isPlaying = false;
-  Duration _position = Duration.zero;
-  Duration _duration = Duration.zero;
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  static List<Music> musicList = [];
+  static List<Music> filteredMusicList = [];
+  static Music? currentMusic;
+  static bool isPlaying = false;
+  static Duration position = Duration.zero;
+  static Duration duration = Duration.zero;
+  static final AudioPlayer audioPlayer = AudioPlayer();
 
-  bool _isSearching = false;
-  final TextEditingController _searchController = TextEditingController();
+  bool isSearching = false;
+  final TextEditingController searchController = TextEditingController();
 
-  MusicPlayerService() {
-    _initializeAudioSession();
-  }
+  static Future<void> initializeAudioSession() async {
+    try {
+      await loadMusicList();
+      await updatePlaylist();
+      audioPlayer.positionStream.listen((pos) {
+        position = pos;
+      });
 
-  Future<void> _initializeAudioSession() async {
-    _audioPlayer.positionStream.listen((pos) {
-      _position = pos;
-    });
+      audioPlayer.durationStream.listen((dur) {
+        duration = dur ?? Duration.zero;
+      });
 
-    _audioPlayer.durationStream.listen((dur) {
-      _duration = dur ?? Duration.zero;
-    });
+      audioPlayer.processingStateStream.listen((state) {
+        if (state == ProcessingState.completed) {
+          playNext();
+        }
+      });
 
-    _audioPlayer.processingStateStream.listen((state) {
-      if (state == ProcessingState.completed) {
-        playNext();
-      }
-    });
-
-    _audioPlayer.currentIndexStream.listen((index) {
-      if (index != null && index >= 0 && index < _musicList.length) {
-        _currentMusic = _musicList[index];
-      }
-    });
+      audioPlayer.currentIndexStream.listen((index) {
+        if (index != null && index >= 0 && index < musicList.length) {
+          currentMusic = musicList[index];
+        }
+      });
+    } catch (e) {
+      debugPrint("Erreur lors de l'initialisation des données : $e");
+    }
   }
 
   // Charger la liste des musiques
-  Future<void> loadMusicList() async {
+  static Future<List<Music>> loadMusicList() async {
     List<Music> savedMusicList = await MusicStorageService.loadMusicList();
-    _musicList = savedMusicList;
-    if (_musicList.isNotEmpty) {
-      _currentMusic = _musicList[0];
+    musicList = savedMusicList;
+    if (musicList.isNotEmpty) {
+      currentMusic = musicList[0];
     }
-    _filteredMusicList = List.from(_musicList);
+    musicList = List.from(musicList);
+    // filteredMusicList = List.from(musicList);
+    return musicList;
   }
 
   // Sauvegarder la dernière musique jouée
-  Future<void> saveLastPlayedMusic(Music? music) async {
+  static void saveLastPlayedMusic(Music? music) async {
     if (music != null) {
       await MusicStorageService.saveLastPlayedMusic(music);
     }
   }
 
-  Future<void> updatePlaylist() async {
+  static Future<void> updatePlaylist() async {
     List<Music> savedMusicList = await MusicStorageService.loadMusicList();
-    _musicList = savedMusicList;
-    if (_musicList.isNotEmpty) {
-      _currentMusic = _musicList.first;
+    musicList = savedMusicList;
+    if (musicList.isNotEmpty) {
+      currentMusic = musicList.first;
     }
-    debugPrint("Musiques mises à jour dans la playlist : $_musicList");
   }
 
   // Lire ou mettre en pause la musique
-  void togglePlayPause(Music music) async {
-    if (_currentMusic == music) {
-      if (_isPlaying) {
-        await _audioPlayer.pause();
-        _isPlaying = false;
+  static Future<void> togglePlayPause(Music music) async {
+    if (currentMusic == music) {
+      if (isPlaying) {
+        await audioPlayer.pause();
       } else {
-        await _audioPlayer.play();
-        _isPlaying = true;
+        await audioPlayer.play();
       }
     } else {
-      await _audioPlayer.stop();
-      await _audioPlayer.setAudioSource(
-        AudioSource.uri(
-          Uri.file(music.path),
-          tag: MediaItem(
-            id: music.path,
-            title: music.title,
-            artist: music.artist,
-          ),
-        ),
-      );
-      await _audioPlayer.play();
-      _isPlaying = true;
-      await saveLastPlayedMusic(music);
+      await audioPlayer.stop();
+      playMusic(music);
     }
   }
 
   // Passer à la musique suivante
-  void playNext() {
-    if (_musicList.isEmpty) return;
-    int currentIndex = _musicList.indexOf(_currentMusic!);
-    int nextIndex = (currentIndex + 1) % _musicList.length;
-    _playMusic(_musicList[nextIndex]);
+  static void playNext() {
+    if (musicList.isEmpty) return;
+    int currentIndex = musicList.indexOf(currentMusic!);
+    int nextIndex = (currentIndex + 1) % musicList.length;
+    playMusic(musicList[nextIndex]);
   }
 
   // Passer à la musique précédente
-  void playPrevious() {
-    if (_musicList.isEmpty) return;
-    int currentIndex = _musicList.indexOf(_currentMusic!);
-    int prevIndex = (currentIndex - 1) % _musicList.length;
-    if (prevIndex < 0) prevIndex = _musicList.length - 1;
-    _playMusic(_musicList[prevIndex]);
+  static void playPrevious() {
+    if (musicList.isEmpty) return;
+    int currentIndex = musicList.indexOf(currentMusic!);
+    int prevIndex = (currentIndex - 1) % musicList.length;
+    if (prevIndex < 0) prevIndex = musicList.length - 1;
+    playMusic(musicList[prevIndex]);
   }
 
   // Jouer une musique
-  Future<void> _playMusic(Music music) async {
-    await _audioPlayer.setAudioSource(
+  static Future<void> playMusic(Music music) async {
+    await audioPlayer.setAudioSource(
       AudioSource.uri(
         Uri.file(music.path),
         tag: MediaItem(
@@ -126,26 +115,23 @@ class MusicPlayerService {
         ),
       ),
     );
-    await _audioPlayer.play();
-    _isPlaying = true;
-    _currentMusic = music;
+    await audioPlayer.play();
+    isPlaying = true;
+    currentMusic = music;
+    saveLastPlayedMusic(music);
   }
 
   // Filtrer la liste de musique par recherche
-  void filterMusicList(String query) {
-    _filteredMusicList =
-        _musicList.where((music) {
+  static void filterMusicList(String query) {
+    filteredMusicList =
+        musicList.where((music) {
           return music.title.toLowerCase().contains(query.toLowerCase()) ||
               music.artist.toLowerCase().contains(query.toLowerCase());
         }).toList();
   }
 
-  Future<void> release() async {
-    await _audioPlayer.stop();
-    _audioPlayer.dispose();
+  static Future<void> release() async {
+    await audioPlayer.stop();
+    audioPlayer.dispose();
   }
-
-  List<Music> get musicList => _musicList;
-  bool get isPlaying => _isPlaying;
-  Music? get currentMusic => _currentMusic;
 }

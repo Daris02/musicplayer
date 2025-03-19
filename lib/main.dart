@@ -1,8 +1,10 @@
-import 'package:audio_session/audio_session.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
 import 'screens/home_page.dart';
+import 'package:musicplayer/utils/music_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,7 +18,12 @@ Future<void> main() async {
   final session = await AudioSession.instance;
   await session.configure(AudioSessionConfiguration.music());
 
-  runApp(MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => MusicProvider(),
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -29,9 +36,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorSchemeSeed: Colors.blue,
         scaffoldBackgroundColor: Colors.black,
-        appBarTheme: AppBarTheme(
-          backgroundColor: Colors.blueAccent
-        ),
+        appBarTheme: AppBarTheme(backgroundColor: Colors.blueAccent),
       ),
       home: SplashScreen(),
     );
@@ -46,7 +51,8 @@ class SplashScreen extends StatefulWidget {
   _SplashScreenState createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -90,7 +96,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             children: [
               ScaleTransition(
                 scale: _animation,
-                child: const Icon(Icons.music_note, size: 80, color: Colors.white),
+                child: const Icon(
+                  Icons.music_note,
+                  size: 80,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(height: 20),
               const Text(

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:musicplayer/models/music.dart';
+import 'package:musicplayer/utils/music_provider.dart';
 
 import 'package:musicplayer/utils/size_config.dart';
 import 'package:musicplayer/screens/artits_screen.dart';
@@ -16,27 +19,25 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final MusicPlayerService musicPlayerService = MusicPlayerService();
   int _selectedIndex = 0;
   late final PageController pageController;
-  late List<Widget> _screens;
+  late List<Music> musicList = [];
+  final List<Widget> _screens = [
+    PlayerScreen(),
+    ArtistsScreen(),
+    PlaylistScreen(),
+    SettingScreen(),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _initializeMusic();
     pageController = PageController(initialPage: _selectedIndex);
-    _screens = [
-      PlayerScreen(musicPlayerService: musicPlayerService),
-      ArtistsScreen(),
-      PlaylistScreen(),
-      SettingScreen(),
-    ];
-  }
 
-  Future<void> _initializeMusic() async {
-    await musicPlayerService.loadMusicList();
-    setState(() {});
+    // Charger la musique à partir du provider
+    Future.microtask(() {
+      Provider.of<MusicProvider>(context, listen: false).loadMusicList();
+    });
   }
 
   @override
@@ -44,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
     pageController.dispose();
     super.dispose();
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -102,26 +104,26 @@ class _HomeScreenState extends State<HomeScreen> {
                                 icon: Icon(Icons.skip_previous),
                                 onPressed: () {
                                   setState(() {
-                                    musicPlayerService.playPrevious();
+                                    MusicPlayerService.playPrevious();
                                   });
                                 },
                               ),
                               IconButton(
                                 icon: Icon(
-                                  musicPlayerService.isPlaying
+                                  MusicPlayerService.isPlaying
                                       ? Icons.pause
                                       : Icons.play_arrow,
                                 ),
                                 onPressed:
-                                    () => musicPlayerService.togglePlayPause(
-                                      musicPlayerService.currentMusic!,
+                                    () => MusicPlayerService.togglePlayPause(
+                                      MusicPlayerService.currentMusic!,
                                     ),
                               ),
                               IconButton(
                                 icon: Icon(Icons.skip_next),
                                 onPressed: () {
                                   setState(() {
-                                    musicPlayerService.playNext();
+                                    MusicPlayerService.playNext();
                                   });
                                 },
                               ),

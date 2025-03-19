@@ -275,15 +275,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             horizontal: 8,
                             vertical: 4,
                           ),
-                          child: MusicTile(
-                            music: _filteredMusicList[index],
-                            onTap: () => {
-                              _playMusic(_filteredMusicList[index]),
-                              setState(() {
-                                _currentMusic = _filteredMusicList[index];
-                              })
-                            },
-                          ),
+                          // child: MusicTile(
+                          //   music: _filteredMusicList[index],
+                          //   onTap: () => {
+                          //     _playMusic(_filteredMusicList[index]),
+                          //     setState(() {
+                          //       _currentMusic = _filteredMusicList[index];
+                          //     })
+                          //   },
+                          // ),
                         );
                       },
                     ),

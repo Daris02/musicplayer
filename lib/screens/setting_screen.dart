@@ -1,34 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:musicplayer/services/music_player_service.dart';
-import 'package:musicplayer/services/music_service.dart';
+import 'package:provider/provider.dart';
+
+import 'package:musicplayer/utils/music_provider.dart';
+import 'package:musicplayer/services/music_storage_service.dart';
 
 class SettingScreen extends StatefulWidget {
-  const SettingScreen({Key? key}) : super(key: key);
+  const SettingScreen({super.key});
 
   @override
   _SettingScreenState createState() => _SettingScreenState();
 }
 
 class _SettingScreenState extends State<SettingScreen> {
-  final MusicPlayerService musicPlayerService = MusicPlayerService();
-  final MusicService musicService = MusicService();
-
   List _selectedFolder = [];
 
   Future<void> _loadMusicFromDevice() async {
-    await MusicService.pickMusicFilesFromFolder();
-    List folderPath = await musicService.getMusicFolderPaths();
-    if (folderPath.isNotEmpty) {
-      await musicService.loadMusicFromFolder();
-      await musicPlayerService.loadMusicList();
-      await musicPlayerService.updatePlaylist();
+    await MusicStorageService.pickMusicFilesFromFolder();
+    List folderPaths = await MusicStorageService.getMusicFolderPaths();
 
-      debugPrint(
-        "Musiques après updatePlaylist : ${musicPlayerService.musicList}",
-      );
+    if (folderPaths.isNotEmpty) {
+      final musicProvider = Provider.of<MusicProvider>(context, listen: false);
+      await musicProvider.loadMusicList();
 
       setState(() {
-        _selectedFolder = folderPath;
+        _selectedFolder = folderPaths;
       });
     }
   }
@@ -49,7 +44,7 @@ class _SettingScreenState extends State<SettingScreen> {
             const SizedBox(height: 20),
             Text(
               "Dossier sélectionné : $_selectedFolder",
-              style: const TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 16, color: Colors.white),
             ),
           ],
         ),
