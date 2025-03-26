@@ -7,16 +7,14 @@ import 'package:musicplayer/services/music_storage_service.dart';
 
 class MusicProvider with ChangeNotifier {
   List<Music> _musicList = [];
-  Music? _currentMusic;
-  bool _isPlaying = false;
+  late Music _currentMusic;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
 
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   List<Music> get musicList => _musicList;
-  Music? get currentMusic => _currentMusic;
-  bool get isPlaying => _isPlaying;
+  Music get currentMusic => _currentMusic;
   Duration get position => _position;
   Duration get duration => _duration;
 
@@ -25,6 +23,8 @@ class MusicProvider with ChangeNotifier {
   }
 
   Future<void> _initializeAudioSession() async {
+    _currentMusic = await MusicStorageService.getLastPlayedMusic();
+
     _audioPlayer.positionStream.listen((pos) {
       _position = pos;
       notifyListeners();
@@ -52,7 +52,7 @@ class MusicProvider with ChangeNotifier {
 
   Future<void> togglePlayPause(Music music) async {
     if (_currentMusic == music) {
-      if (_isPlaying) {
+      if (isPlaying()) {
         await _audioPlayer.pause();
       } else {
         await _audioPlayer.play();
@@ -61,34 +61,35 @@ class MusicProvider with ChangeNotifier {
       await _audioPlayer.stop();
       await _playMusic(music);
     }
-    _isPlaying = !_isPlaying;
-    notifyListeners();
+  }
+
+  bool isPlaying() {
+    return _audioPlayer.playing;
   }
 
   Future<void> _playMusic(Music music) async {
+    await MusicStorageService.saveLastPlayedMusic(music);
+    _currentMusic = music;
     await _audioPlayer.setAudioSource(
       AudioSource.uri(
-        Uri.file(music.path),
-        tag: MediaItem(id: music.path, title: music.title, artist: music.artist),
+        Uri.file(_currentMusic.path),
+        tag: MediaItem(id: _currentMusic.path, title: _currentMusic.title, artist: _currentMusic.artist),
       ),
     );
     await _audioPlayer.play();
-    _isPlaying = true;
-    _currentMusic = music;
-    await MusicStorageService.saveLastPlayedMusic(music);
     notifyListeners();
   }
 
   void playNext() {
     if (_musicList.isEmpty) return;
-    int currentIndex = _musicList.indexOf(_currentMusic!);
+    int currentIndex = _musicList.indexOf(_currentMusic);
     int nextIndex = (currentIndex + 1) % _musicList.length;
     _playMusic(_musicList[nextIndex]);
   }
 
   void playPrevious() {
     if (_musicList.isEmpty) return;
-    int currentIndex = _musicList.indexOf(_currentMusic!);
+    int currentIndex = _musicList.indexOf(_currentMusic);
     int prevIndex = (currentIndex - 1) % _musicList.length;
     if (prevIndex < 0) prevIndex = _musicList.length - 1;
     _playMusic(_musicList[prevIndex]);

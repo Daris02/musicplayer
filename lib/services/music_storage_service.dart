@@ -180,7 +180,7 @@ class MusicStorageService {
   }
 
   // Charger la dernière musique jouée
-  static Future<Music?> getLastPlayedMusic() async {
+  static Future<Music> getLastPlayedMusic() async {
     final prefs = await SharedPreferences.getInstance();
     String? lastMusicPlayedPath = prefs.getString(_lastPlayedMusicKey);
     List<Music>? musicLists = await loadMusicList();
@@ -193,10 +193,10 @@ class MusicStorageService {
       } catch (e) {
         debugPrint(e.toString());
         debugPrint("⚠️ Aucune musique trouvée avec ce chemin");
-        return null;
+        return musicLists.first;
       }
     }
-    return null;
+    return musicLists.first;
   }
 
   static const String _playlistKey = 'playlists';

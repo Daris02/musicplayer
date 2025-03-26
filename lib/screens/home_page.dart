@@ -9,7 +9,6 @@ import 'package:musicplayer/screens/player_screen.dart';
 import 'package:musicplayer/screens/setting_screen.dart';
 import 'package:musicplayer/widgets/bottom_nav_bar.dart';
 import 'package:musicplayer/screens/playlist_screen.dart';
-import 'package:musicplayer/services/music_player_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,7 +33,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     pageController = PageController(initialPage: _selectedIndex);
 
-    // Charger la musique à partir du provider
     Future.microtask(() {
       Provider.of<MusicProvider>(context, listen: false).loadMusicList();
     });
@@ -50,6 +48,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     AppSizes().initSizes(context);
+    final musicProvider = Provider.of<MusicProvider>(context);
+    
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -71,8 +71,20 @@ class _HomeScreenState extends State<HomeScreen> {
         bottom: false,
         child: Stack(
           children: [
+            Positioned.fill(
+              child: PageView(
+                controller: pageController,
+                children: _screens,
+                onPageChanged: (value) {
+                  setState(() {
+                    _selectedIndex = value;
+                  });
+                },
+              ),
+            ),
+
             Positioned(
-              top: 10,
+              bottom: 2,
               left: 0,
               right: 0,
               child: Padding(
@@ -88,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   elevation: 10,
                   child: Container(
                     width: AppSizes.screenWidth,
-                    height: AppSizes.blockSizeHorizontal * 18,
+                    height: AppSizes.blockSizeHorizontal * 25,
                     decoration: BoxDecoration(
                       color: Colors.grey[900],
                       borderRadius: BorderRadius.circular(30),
@@ -97,33 +109,34 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Positioned(
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            mainAxisAlignment: MainAxisAlignment.end,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               IconButton(
                                 icon: Icon(Icons.skip_previous),
                                 onPressed: () {
                                   setState(() {
-                                    MusicPlayerService.playPrevious();
+                                    musicProvider.playPrevious();
                                   });
                                 },
                               ),
                               IconButton(
                                 icon: Icon(
-                                  MusicPlayerService.isPlaying
+                                  musicProvider.isPlaying()
                                       ? Icons.pause
                                       : Icons.play_arrow,
                                 ),
                                 onPressed:
-                                    () => MusicPlayerService.togglePlayPause(
-                                      MusicPlayerService.currentMusic!,
-                                    ),
+                                    () => {
+                                      musicProvider.togglePlayPause(musicProvider.currentMusic),
+                                      
+                                    },
                               ),
                               IconButton(
                                 icon: Icon(Icons.skip_next),
                                 onPressed: () {
                                   setState(() {
-                                    MusicPlayerService.playNext();
+                                    musicProvider.playNext();
                                   });
                                 },
                               ),
@@ -134,18 +147,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-              ),
-            ),
-
-            Positioned.fill(
-              child: PageView(
-                controller: pageController,
-                children: _screens,
-                onPageChanged: (value) {
-                  setState(() {
-                    _selectedIndex = value;
-                  });
-                },
               ),
             ),
 

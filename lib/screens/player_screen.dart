@@ -20,19 +20,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
       appBar: AppBar(title: const Text('All Tracks')),
       body: Column(
         children: [
-          // Afficher la liste des musiques
           Expanded(
             child: ListView.builder(
               itemCount: musicProvider.musicList.length,
               itemBuilder: (context, index) {
                 final music = musicProvider.musicList[index];
                 return MusicTile(
-                  music: music,
-                  isPlaying:
-                      musicProvider.currentMusic == music &&
-                      musicProvider.isPlaying,
-                  onTap: () => musicProvider.togglePlayPause(music),
-                  currentMusic: musicProvider.currentMusic!,
+                  music: music
                 );
               },
             ),

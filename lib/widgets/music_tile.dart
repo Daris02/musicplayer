@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import 'package:musicplayer/models/music.dart';
+import 'package:musicplayer/utils/music_provider.dart';
 
 class MusicTile extends StatelessWidget {
   final Music music;
-  final Music currentMusic;
-  final VoidCallback onTap;
-  final bool isPlaying;
 
   const MusicTile({
     super.key,
     required this.music,
-    required this.onTap,
-    required this.isPlaying,
-    required this.currentMusic,
   });
 
   @override
   Widget build(BuildContext context) {
+    final musicProvider = Provider.of<MusicProvider>(context);
+    
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -46,9 +45,14 @@ class MusicTile extends StatelessWidget {
           music.artist != '' ? music.artist : 'Artiste inconnu',
           style: const TextStyle(fontSize: 14, color: Colors.grey),
         ),
-        onTap: onTap,
+        onTap: () => {
+          musicProvider.togglePlayPause(music),
+          debugPrint("⚠️ -- ⚠️ -- ⚠️ --- ⚠️ Play Current Music: ${music.toString()}"),
+          debugPrint("⚠️ -- ⚠️ -- ⚠️ --- ⚠️ isPlaying: ${musicProvider.isPlaying()}"),
+          debugPrint("⚠️ -- ⚠️ -- ⚠️ --- ⚠️ Music from provider: ${musicProvider.currentMusic}"),
+        },
         trailing: Icon(
-          isPlaying && currentMusic == music ? Icons.pause : Icons.play_arrow,
+          musicProvider.isPlaying() && musicProvider.currentMusic == music ? Icons.pause : Icons.play_arrow,
         ),
       ),
     );
