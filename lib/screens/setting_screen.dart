@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:musicplayer/utils/music_provider.dart';
-import 'package:musicplayer/services/music_storage_service.dart';
+import 'package:musicplayer/services/storage_service.dart';
 
 class SettingScreen extends StatefulWidget {
   const SettingScreen({super.key});
@@ -15,8 +15,8 @@ class _SettingScreenState extends State<SettingScreen> {
   List _selectedFolder = [];
 
   Future<void> _loadMusicFromDevice() async {
-    await MusicStorageService.pickMusicFilesFromFolder();
-    List folderPaths = await MusicStorageService.getMusicFolderPaths();
+    await StorageService.pickMusicFilesFromFolder();
+    List folderPaths = await StorageService.getMusicFolderPaths();
 
     if (folderPaths.isNotEmpty) {
       final musicProvider = Provider.of<MusicProvider>(context, listen: false);

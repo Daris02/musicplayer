@@ -3,7 +3,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
 import 'package:musicplayer/models/music.dart';
-import 'package:musicplayer/services/music_storage_service.dart';
+import 'package:musicplayer/services/storage_service.dart';
 
 class MusicProvider with ChangeNotifier {
   List<Music> _musicList = [];
@@ -23,7 +23,7 @@ class MusicProvider with ChangeNotifier {
   }
 
   Future<void> _initializeAudioSession() async {
-    _currentMusic = await MusicStorageService.getLastPlayedMusic();
+    _currentMusic = await StorageService.getLastPlayedMusic();
 
     _audioPlayer.positionStream.listen((pos) {
       _position = pos;
@@ -43,7 +43,7 @@ class MusicProvider with ChangeNotifier {
   }
 
   Future<void> loadMusicList() async {
-    _musicList = await MusicStorageService.loadMusicList();
+    _musicList = await StorageService.loadMusicList();
     if (_musicList.isNotEmpty) {
       _currentMusic = _musicList.first;
     }
@@ -68,7 +68,7 @@ class MusicProvider with ChangeNotifier {
   }
 
   Future<void> _playMusic(Music music) async {
-    await MusicStorageService.saveLastPlayedMusic(music);
+    await StorageService.saveLastPlayedMusic(music);
     _currentMusic = music;
     await _audioPlayer.setAudioSource(
       AudioSource.uri(
@@ -95,6 +95,7 @@ class MusicProvider with ChangeNotifier {
     _playMusic(_musicList[prevIndex]);
   }
 
+  @override
   void dispose() {
     _audioPlayer.dispose();
     super.dispose();

@@ -19,7 +19,7 @@ class MusicTile extends StatelessWidget {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Colors.white.withAlpha(100),
+      color: const Color.fromARGB(255, 31, 31, 31).withAlpha(100),
       child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
@@ -39,6 +39,7 @@ class MusicTile extends StatelessWidget {
             fontSize: 16,
             fontWeight: FontWeight.bold,
             fontFamily: 'Poppins',
+            color: Colors.white
           ),
         ),
         subtitle: Text(

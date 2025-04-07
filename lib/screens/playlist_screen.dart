@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:musicplayer/screens/playlist_detail_screen.dart';
 
 class PlaylistScreen extends StatelessWidget {
-  const PlaylistScreen({Key? key}) : super(key: key);
+  const PlaylistScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

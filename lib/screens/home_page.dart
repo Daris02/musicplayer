@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'package:musicplayer/models/music.dart';
 import 'package:musicplayer/utils/music_provider.dart';
-
 import 'package:musicplayer/utils/size_config.dart';
 import 'package:musicplayer/screens/artits_screen.dart';
 import 'package:musicplayer/screens/player_screen.dart';
 import 'package:musicplayer/screens/setting_screen.dart';
-import 'package:musicplayer/widgets/bottom_nav_bar.dart';
 import 'package:musicplayer/screens/playlist_screen.dart';
+import 'package:musicplayer/widgets/bottom_nav_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -97,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Material(
                   borderRadius: BorderRadius.circular(30),
                   color: Colors.transparent,
-                  elevation: 10,
+                  elevation: 12,
                   child: Container(
                     width: AppSizes.screenWidth,
                     height: AppSizes.blockSizeHorizontal * 25,
@@ -170,11 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
         AppSizes.blockSizeHorizontal * 4.5,
         20,
       ),
-      child: Material(
-        borderRadius: BorderRadius.circular(30),
-        color: Colors.transparent,
-        elevation: 10,
-        child: Container(
+      child: Container(
           width: AppSizes.screenWidth,
           height: AppSizes.blockSizeHorizontal * 18,
           decoration: BoxDecoration(
@@ -254,7 +250,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-      ),
     );
   }
 }
